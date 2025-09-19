@@ -195,27 +195,39 @@ def plot_nb_substitutions(summary_data, save_path=None):
         plt.show()
 
 def plot_summary(summary_file, make_imbalance=False):
-    """Load summary.json and create plots conditionally."""
+    """Load summary.json and conditionally create plots based on instance.json."""
+
     with open(summary_file, "r") as f:
         summary_data = json.load(f)
 
     base_dir = os.path.dirname(summary_file)
 
-    # Always plot total score
+    # --- Load instance.json ---
+    instance_file = os.path.join(base_dir, "instance.json")
+    only_individual = False
+    if os.path.exists(instance_file):
+        try:
+            with open(instance_file, "r") as f:
+                instance_data = json.load(f)
+                only_individual = instance_data.get("only_individual", False)
+        except Exception as e:
+            print(f"⚠️ Failed to load {instance_file}: {e}")
+
+    # --- Always plot total score ---
     save_path_score = os.path.join(base_dir, "score_plot.png")
     plot_instance_total_score(summary_data, save_path=save_path_score)
 
-    # Plot player scores only if "only_individual": true
-    if summary_data.get("only_individual", False):
+    # --- Plot player scores only if instance.json says so ---
+    if not only_individual:
         save_path_player = os.path.join(base_dir, "player_score_plot.png")
         plot_instance_player_scores(summary_data, save_path=save_path_player)
 
-    # Only sometimes plot imbalance
+    # --- Only sometimes plot imbalance ---
     if make_imbalance:
         save_path_imb = os.path.join(base_dir, "imbalance_plot.png")
         plot_instance_proposal_imbalance(summary_data, save_path=save_path_imb)
 
-    # Always plot substitutions
+    # --- Always plot substitutions ---
     save_path_subs = os.path.join(base_dir, "substitutions_plot.png")
     plot_nb_substitutions(summary_data, save_path=save_path_subs)
 
@@ -256,7 +268,6 @@ def traverse_and_plot(base_path: str):
                               f"(imbalance={'yes' if make_imbalance else 'no'})")
                     except Exception as e:
                         print(f"Failed to plot {summary_file}: {e}")
-
 
 if __name__ == "__main__":
 
