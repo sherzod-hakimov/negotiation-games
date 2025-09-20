@@ -212,6 +212,17 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     else:
         pareto_adherence_rate = None
 
+    # --- Compute Alternation rate (proposer turn-taking) ---
+    if len(summary["proposals"]) >= 2:
+        proposers = [p["by"] for p in summary["proposals"]]
+        alternations = sum(
+            1 for i in range(1, len(proposers)) if proposers[i] != proposers[i - 1]
+        )
+        max_alternations = len(proposers) - 1
+        alternation_rate = alternations / max_alternations if max_alternations > 0 else None
+    else:
+        alternation_rate = None
+
     # Compute final deal scores
     if final_deal:
         summary["scores"] = {
@@ -224,9 +235,11 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
             "episode_score": 100.0 / turns if turns > 0 else 100.0,
             "pareto_optimum": summary["agreement"]["pareto_optimum"],
             "pareto_adherence_rate": pareto_adherence_rate,
+            "alternation_rate": alternation_rate,
         }
     else:
         summary["scores"]["pareto_adherence_rate"] = pareto_adherence_rate
+        summary["scores"]["alternation_rate"] = alternation_rate
 
     # Individual optima
     best_u1, set_u1 = dp_pseudo_poly_knapsack(item_weights, p1_prefs, game_instance["max_weight"])
