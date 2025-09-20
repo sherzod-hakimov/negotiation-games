@@ -149,7 +149,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         turns += 1
         for event in turn:
             if (
-                    event["action"]["type"] == "get message"
+                    event["from"] == "GM"
                     and isinstance(event["action"].get("content"), str)
                     and not event["action"]["content"].startswith("You are participating")
             ):

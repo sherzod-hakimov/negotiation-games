@@ -107,14 +107,14 @@ def compute_model_metrics(base_path: str):
     return model_results
 
 
-def plot_focus_changes(results):
+def plot_focus_changes(results, max_points=12):
     """Plot normalized substitutions (focus experiments) per model."""
     for model, metrics in results.items():
         idx_changes_focus = metrics["avg_per_idx_changes_focus"]
         if not idx_changes_focus:
             continue
 
-        xs = sorted(idx_changes_focus.keys())
+        xs = sorted(idx_changes_focus.keys())[:max_points]
         ys = [idx_changes_focus[x] for x in xs]
 
         plt.figure(figsize=(6, 4))
