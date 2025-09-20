@@ -4,7 +4,6 @@ import ast
 import re
 from itertools import chain, combinations
 
-
 def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     with open(log_file, "r") as f:
         log_data = json.load(f)
@@ -138,7 +137,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         "game_id": log_data["meta"]["game_id"],
         "proposals": [],
         "refusals": [],
-        "agreement": None,
+        "agreement": log_data["final deal"],
         "max_weight": game_instance["max_weight"],
         "scores": {}
     }
@@ -146,71 +145,45 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     turns = 0
     final_deal = None
 
-    # --- Loop over turns and filter invalid messages ---
-    for t_idx, turn in enumerate(log_data["turns"]):
+    for turn in log_data["turns"]:
         turns += 1
-        for e_idx, event in enumerate(turn):
-            if event["action"]["type"] != "get message":
-                continue
+        for event in turn:
+            if (
+                    event["action"]["type"] == "get message"
+                    and isinstance(event["action"].get("content"), str)
+                    and not event["action"]["content"].startswith("You are participating")
+            ):
 
-            response = event["action"]["content"]
-            actor = event["from"]
+                # --- Proposals ---
 
-            # --- Check if this was invalid (reprompt case) ---
-            reprompted = False
-            if t_idx + 1 < len(log_data["turns"]):
-                next_turn = log_data["turns"][t_idx + 1]
-                if next_turn:
-                    next_event = next_turn[0]  # GM always goes first in reprompt
-                    if (
-                        next_event["from"] == "GM"
-                        and next_event.get("action", {}).get("label") == "context"
-                        and next_event["to"] == actor
-                    ):
-                        reprompted = True
+                response = event["action"]["content"]
+                # the actor is the one who sent the message to GM so not the receiver
+                actor = "Player 1" if event["to"] == "Player 2" else "Player 2"
 
-            if reprompted:
-                continue  # 🚫 skip invalid message
+                try:
+                    proposals_found = re.findall(proposal_tag, response, flags=re.DOTALL)
+                    for match in proposals_found:
+                        set_str = match.split(":", 1)[1].strip()
+                        proposal = ast.literal_eval(set_str)
+                        scored = score_set(proposal)
+                        scored["by"] = actor
+                        scored["turn"] = turns
+                        summary["proposals"].append(scored)
+                except Exception:
+                    pass
 
-            # --- Proposals ---
-            try:
-                proposals_found = re.findall(proposal_tag, response, flags=re.DOTALL)
-                for match in proposals_found:
-                    set_str = match.split(":", 1)[1].strip()
-                    proposal = ast.literal_eval(set_str)
-                    scored = score_set(proposal)
-                    scored["by"] = actor
-                    scored["turn"] = turns
-                    summary["proposals"].append(scored)
-            except Exception:
-                pass
-
-            # --- Agreements ---
-            try:
-                agreements_found = re.findall(agree_tag, response, flags=re.DOTALL)
-                for match in agreements_found:
-                    set_str = match.split(":", 1)[1].strip()
-                    agreement = ast.literal_eval(set_str)
-                    final_deal = agreement
-                    scored = score_set(agreement)
-                    scored["by"] = actor
-                    scored["turn"] = turns
-                    summary["agreement"] = scored
-            except Exception:
-                pass
-
-            # --- Refusals ---
-            try:
-                refusals_found = re.findall(refusal_tag, response, flags=re.DOTALL)
-                for match in refusals_found:
-                    set_str = match.split(":", 1)[1].strip()
-                    refusal = ast.literal_eval(set_str)
-                    scored = score_set(refusal)
-                    scored["by"] = actor
-                    scored["turn"] = turns
-                    summary["refusals"].append(scored)
-            except Exception:
-                pass
+                # --- Refusals ---
+                try:
+                    refusals_found = re.findall(refusal_tag, response, flags=re.DOTALL)
+                    for match in refusals_found:
+                        set_str = match.split(":", 1)[1].strip()
+                        refusal = ast.literal_eval(set_str)
+                        scored = score_set(refusal)
+                        scored["by"] = actor
+                        scored["turn"] = turns
+                        summary["refusals"].append(scored)
+                except Exception:
+                    pass
 
     # Store maxima
     summary["max_u1"] = game_instance.get("max_u1")

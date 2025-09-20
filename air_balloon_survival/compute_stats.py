@@ -121,13 +121,13 @@ def plot_focus_changes(results):
         plt.plot(xs, ys, linewidth=1.5, marker="o", markersize=3)
         plt.xlabel("Proposal index")
         plt.ylabel("Avg. normalized substitutions")
-        plt.title(f"Normalized substitutions per proposal\n{model} (focus experiments)")
+        plt.title(f"Avg. Normalized substitutions over proposal idx\n{model} - opposite goals experiments")
         plt.grid(True, linestyle=":", alpha=0.6)
         plt.tight_layout()
 
         # save one pdf per model
         safe_model = model.replace("/", "_")
-        plt.savefig(f"substitutions_focus_{safe_model}.pdf")
+        plt.savefig(f"air_balloon_survival/substitutions_opposite_goals_{safe_model}.pdf")
         plt.close()
 
 
