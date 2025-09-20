@@ -4,7 +4,6 @@ import ast
 import re
 from itertools import chain, combinations
 
-
 def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     with open(log_file, "r") as f:
         log_data = json.load(f)
@@ -207,21 +206,35 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     # --- Compute Pareto adherence rate (per-proposal) ---
     pareto_flags = [p.get("pareto_optimum", None) for p in summary["proposals"]]
     valid_flags = [flag for flag in pareto_flags if flag is not None]
-    if valid_flags:
-        pareto_adherence_rate = sum(flag is True for flag in valid_flags) / len(valid_flags)
-    else:
-        pareto_adherence_rate = None
+    pareto_adherence_rate = (
+        sum(flag is True for flag in valid_flags) / len(valid_flags)
+        if valid_flags else None
+    )
 
-    # --- Compute Alternation rate (proposer turn-taking) ---
-    if len(summary["proposals"]) >= 2:
-        proposers = [p["by"] for p in summary["proposals"]]
-        alternations = sum(
-            1 for i in range(1, len(proposers)) if proposers[i] != proposers[i - 1]
-        )
-        max_alternations = len(proposers) - 1
-        alternation_rate = alternations / max_alternations if max_alternations > 0 else None
-    else:
-        alternation_rate = None
+    # --- Compute Alternation rate ---
+    alternations = 0
+    proposers = [p["by"] for p in summary["proposals"]]
+    for i in range(1, len(proposers)):
+        if proposers[i] != proposers[i - 1]:
+            alternations += 1
+    alternation_rate = (
+        alternations / (len(proposers) - 1)
+        if len(proposers) > 1 else None
+    )
+
+    # --- Compute normalized substitutions ---
+    normalized_changes = []
+    for i in range(1, len(summary["proposals"])):
+        prev_items = set(summary["proposals"][i - 1]["items"])
+        curr_items = set(summary["proposals"][i]["items"])
+        subs = len(prev_items ^ curr_items)  # symmetric difference
+        prev_size = len(prev_items) if len(prev_items) > 0 else 1
+        normalized_changes.append(subs / prev_size)
+
+    avg_normalized_subs = float(sum(normalized_changes) / len(normalized_changes)) if normalized_changes else None
+
+    # Store both
+    summary["normalized_substitutions_per_proposal"] = normalized_changes
 
     # Compute final deal scores
     if final_deal:
@@ -236,12 +249,16 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
             "pareto_optimum": summary["agreement"]["pareto_optimum"],
             "pareto_adherence_rate": pareto_adherence_rate,
             "alternation_rate": alternation_rate,
+            "avg_normalized_substitutions": avg_normalized_subs,
         }
     else:
-        summary["scores"]["pareto_adherence_rate"] = pareto_adherence_rate
-        summary["scores"]["alternation_rate"] = alternation_rate
+        summary["scores"].update({
+            "pareto_adherence_rate": pareto_adherence_rate,
+            "alternation_rate": alternation_rate,
+            "avg_normalized_substitutions": avg_normalized_subs,
+        })
 
-    # Individual optima
+    # --- Individual optima via knapsack ---
     best_u1, set_u1 = dp_pseudo_poly_knapsack(item_weights, p1_prefs, game_instance["max_weight"])
     best_u2, set_u2 = dp_pseudo_poly_knapsack(item_weights, p2_prefs, game_instance["max_weight"])
 
@@ -258,40 +275,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         "pareto_optimum": is_pareto(set_u2),
     }
 
-    # Global optimum
-    if not game_instance.get("only_individual", False):
-        item_list = list(item_weights.keys())
-        best_set = set()
-        best_score = -1
-
-        def all_subsets(iterable):
-            s = list(iterable)
-            return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
-
-        for subset in all_subsets(item_list):
-            total_weight, u1, u2 = evaluate_set(subset)
-            if total_weight > game_instance["max_weight"]:
-                continue
-
-            norm_u1 = (u1 / game_instance["max_u1"] * 100) if game_instance["max_u1"] > 0 else 0
-            norm_u2 = (u2 / game_instance["max_u2"] * 100) if game_instance["max_u2"] > 0 else 0
-
-            harmonic = 2 * (norm_u1 * norm_u2) / (norm_u1 + norm_u2) if (norm_u1 + norm_u2) > 0 else 0
-
-            if harmonic > best_score:
-                best_score = harmonic
-                best_set = set(subset)
-
-        summary["global_optimum"] = {
-            "items": sorted(list(best_set)),
-            "utility_player1": sum(p1_prefs[i] for i in best_set),
-            "utility_player2": sum(p2_prefs[i] for i in best_set),
-            "harmonic_mean": best_score,
-            "pareto_optimum": is_pareto(best_set),
-        }
-    else:
-        summary["global_optimum"] = None  # not applicable
-
+    # Save JSON
     with open(output_file, "w") as f:
         json.dump(summary, f, indent=2)
 
