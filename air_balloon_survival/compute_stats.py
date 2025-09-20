@@ -2,6 +2,13 @@ import os
 import json
 import numpy as np
 from collections import defaultdict
+import matplotlib.pyplot as plt
+
+FOCUS_EXPERIMENTS = {
+    "air_balloon_survival_en_negotiation_hard",
+    "air_balloon_survival_en_reasoning off_hard",
+}
+
 
 def compute_model_metrics(base_path: str):
     model_results = {}
@@ -21,14 +28,16 @@ def compute_model_metrics(base_path: str):
         per_idx_main_scores = defaultdict(list)
         conv_lengths = []
 
-        # For binning
-        all_instances = []
+        # Focus experiment only
+        per_idx_changes_focus = defaultdict(list)
+        per_idx_diff_focus = defaultdict(list)
 
         for experiment in os.listdir(hot_air_path):
             exp_path = os.path.join(hot_air_path, experiment)
             if not os.path.isdir(exp_path):
                 continue
 
+            # --- regular stats for all experiments ---
             for instance in os.listdir(exp_path):
                 inst_path = os.path.join(exp_path, instance)
                 if not os.path.isdir(inst_path):
@@ -55,72 +64,71 @@ def compute_model_metrics(base_path: str):
                     if alternation_rate is not None:
                         alternation_rates.append(alternation_rate)
 
-                    # Collect per-proposal substitution ratios
-                    prop_changes = summary_data.get("normalized_substitutions_per_proposal", None)
-                    if prop_changes:
-                        for idx, val in enumerate(prop_changes, start=1):
-                            if val is not None:
-                                per_idx_changes[idx].append(val)
+                    # per-proposal substitutions
+                    prop_changes = summary_data.get("normalized_substitutions_per_proposal", [])
+                    for idx, val in enumerate(prop_changes, start=1):
+                        if val is not None:
+                            per_idx_changes[idx].append(val)
 
-                    # Collect per-proposal main scores
+                    # per-proposal harmonic mean
                     for idx, proposal in enumerate(proposals, start=1):
                         val = proposal.get("normalized_harmonic_mean", None)
                         if val is not None:
                             per_idx_main_scores[idx].append(val)
 
-                    # Store instance-level data for later binning
-                    all_instances.append((conv_len, prop_changes, [p.get("normalized_harmonic_mean") for p in proposals]))
+                    # --- focus experiments only ---
+                    if experiment in FOCUS_EXPERIMENTS:
+                        # substitutions
+                        for idx, val in enumerate(prop_changes, start=1):
+                            if val is not None:
+                                per_idx_changes_focus[idx].append(val)
+
+                        # abs diff between players
+                        for idx, proposal in enumerate(proposals, start=1):
+                            u1 = proposal.get("normalized_u1")
+                            u2 = proposal.get("normalized_u2")
+                            if u1 is not None and u2 is not None:
+                                per_idx_diff_focus[idx].append(abs(u1 - u2))
 
                 except Exception as e:
                     print(f"Failed to read {summary_file}: {e}")
 
-        # Compute quantiles for binning
-        bins = None
-        if conv_lengths:
-            q1, q2 = np.percentile(conv_lengths, [33, 66])
-            bins = (q1, q2)
-
-        # Assign instances to bins
-        binned_changes = {"short": defaultdict(list), "medium": defaultdict(list), "long": defaultdict(list)}
-        binned_scores = {"short": defaultdict(list), "medium": defaultdict(list), "long": defaultdict(list)}
-
-        if bins:
-            q1, q2 = bins
-            for conv_len, changes, scores_list in all_instances:
-                if conv_len <= q1:
-                    bin_name = "short"
-                elif conv_len <= q2:
-                    bin_name = "medium"
-                else:
-                    bin_name = "long"
-
-                if changes:
-                    for idx, val in enumerate(changes, start=1):
-                        if val is not None:
-                            binned_changes[bin_name][idx].append(val)
-
-                if scores_list:
-                    for idx, val in enumerate(scores_list, start=1):
-                        if val is not None:
-                            binned_scores[bin_name][idx].append(val)
-
         model_results[model] = {
+            # all experiments
             "avg_pareto_adherence_rate": float(np.mean(adherence_rates)) if adherence_rates else None,
             "avg_alternation_rate": float(np.mean(alternation_rates)) if alternation_rates else None,
             "avg_per_idx_changes": {idx: float(np.mean(vals)) for idx, vals in per_idx_changes.items()},
             "avg_per_idx_main_scores": {idx: float(np.mean(vals)) for idx, vals in per_idx_main_scores.items()},
-            "avg_per_idx_changes_binned": {
-                bin_name: {idx: float(np.mean(vals)) for idx, vals in idx_dict.items()}
-                for bin_name, idx_dict in binned_changes.items()
-            },
-            "avg_per_idx_main_scores_binned": {
-                bin_name: {idx: float(np.mean(vals)) for idx, vals in idx_dict.items()}
-                for bin_name, idx_dict in binned_scores.items()
-            },
-            "length_bins": bins,
+            # focus only
+            "avg_per_idx_changes_focus": {idx: float(np.mean(vals)) for idx, vals in per_idx_changes_focus.items()},
+            "avg_per_idx_diff_focus": {idx: float(np.mean(vals)) for idx, vals in per_idx_diff_focus.items()},
         }
 
     return model_results
+
+
+def plot_focus_changes(results):
+    """Plot normalized substitutions (focus experiments) per model."""
+    for model, metrics in results.items():
+        idx_changes_focus = metrics["avg_per_idx_changes_focus"]
+        if not idx_changes_focus:
+            continue
+
+        xs = sorted(idx_changes_focus.keys())
+        ys = [idx_changes_focus[x] for x in xs]
+
+        plt.figure(figsize=(6, 4))
+        plt.plot(xs, ys, linewidth=1.5, marker="o", markersize=3)
+        plt.xlabel("Proposal index")
+        plt.ylabel("Avg. normalized substitutions")
+        plt.title(f"Normalized substitutions per proposal\n{model} (focus experiments)")
+        plt.grid(True, linestyle=":", alpha=0.6)
+        plt.tight_layout()
+
+        # save one pdf per model
+        safe_model = model.replace("/", "_")
+        plt.savefig(f"substitutions_focus_{safe_model}.pdf")
+        plt.close()
 
 
 if __name__ == "__main__":
@@ -139,7 +147,7 @@ if __name__ == "__main__":
         alternation_str = f"{alternation:.3f}" if alternation is not None else "no data"
         print(f"{model}: {alternation_str}")
 
-    print("\n=== Average normalized substitutions per proposal index ===")
+    print("\n=== Average normalized substitutions per proposal index (all experiments) ===")
     for model, metrics in results.items():
         idx_changes = metrics["avg_per_idx_changes"]
         if not idx_changes:
@@ -148,7 +156,7 @@ if __name__ == "__main__":
             idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_changes.items())])
             print(f"{model}: {idx_str}")
 
-    print("\n=== Average normalized harmonic mean per proposal index ===")
+    print("\n=== Average normalized harmonic mean per proposal index (all experiments) ===")
     for model, metrics in results.items():
         idx_scores = metrics["avg_per_idx_main_scores"]
         if not idx_scores:
@@ -157,35 +165,23 @@ if __name__ == "__main__":
             idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_scores.items())])
             print(f"{model}: {idx_str}")
 
-    print("\n=== Average normalized substitutions per proposal index (binned) ===")
+    print("\n=== Focus experiments only (normalized substitutions per proposal index) ===")
     for model, metrics in results.items():
-        idx_changes_binned = metrics["avg_per_idx_changes_binned"]
-        if not any(idx_changes_binned.values()):
+        idx_changes_focus = metrics["avg_per_idx_changes_focus"]
+        if not idx_changes_focus:
             print(f"{model}: no data")
         else:
-            for bin_name, idx_dict in idx_changes_binned.items():
-                if not idx_dict:
-                    continue
-                idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_dict.items())])
-                print(f"{model} ({bin_name}): {idx_str}")
+            idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_changes_focus.items())])
+            print(f"{model}: {idx_str}")
 
-    print("\n=== Average normalized harmonic mean per proposal index (binned) ===")
+    print("\n=== Focus experiments only (absolute difference between players per proposal index) ===")
     for model, metrics in results.items():
-        main_scores_binned = metrics["avg_per_idx_main_scores_binned"]
-        if not any(main_scores_binned.values()):
+        idx_diff_focus = metrics["avg_per_idx_diff_focus"]
+        if not idx_diff_focus:
             print(f"{model}: no data")
         else:
-            for bin_name, idx_dict in main_scores_binned.items():
-                if not idx_dict:
-                    continue
-                idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_dict.items())])
-                print(f"{model} ({bin_name}): {idx_str}")
+            idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_diff_focus.items())])
+            print(f"{model}: {idx_str}")
 
-    print("\n=== Conversation length bins per model ===")
-    for model, metrics in results.items():
-        bins = metrics.get("length_bins", None)
-        if bins:
-            q1, q2 = bins
-            print(f"{model}: short ≤ {q1:.1f}, medium ≤ {q2:.1f}, long > {q2:.1f}")
-        else:
-            print(f"{model}: no length data")
+    # plot focus-only substitutions per model
+    plot_focus_changes(results)

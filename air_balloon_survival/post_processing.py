@@ -4,6 +4,7 @@ import ast
 import re
 from itertools import chain, combinations
 
+
 def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     with open(log_file, "r") as f:
         log_data = json.load(f)
@@ -145,14 +146,31 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     turns = 0
     final_deal = None
 
-    for turn in log_data["turns"]:
+    # --- Loop over turns and filter invalid messages ---
+    for t_idx, turn in enumerate(log_data["turns"]):
         turns += 1
-        for event in turn:
+        for e_idx, event in enumerate(turn):
             if event["action"]["type"] != "get message":
                 continue
 
             response = event["action"]["content"]
             actor = event["from"]
+
+            # --- Check if this was invalid (reprompt case) ---
+            reprompted = False
+            if t_idx + 1 < len(log_data["turns"]):
+                next_turn = log_data["turns"][t_idx + 1]
+                if next_turn:
+                    next_event = next_turn[0]  # GM always goes first in reprompt
+                    if (
+                        next_event["from"] == "GM"
+                        and next_event.get("action", {}).get("label") == "context"
+                        and next_event["to"] == actor
+                    ):
+                        reprompted = True
+
+            if reprompted:
+                continue  # 🚫 skip invalid message
 
             # --- Proposals ---
             try:
