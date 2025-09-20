@@ -1,7 +1,9 @@
 import os
 import json
 import ast
+import re
 from itertools import chain, combinations
+
 
 def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     with open(log_file, "r") as f:
@@ -13,8 +15,46 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     p1_prefs = game_instance["player1_preferences"]
     p2_prefs = game_instance["player2_preferences"]
 
-    pareto_sets = [frozenset(s) for s in game_instance.get("pareto_optima_sets", [])] \
-                  if not game_instance.get("only_individual", False) else None
+    # regex tags from instance.json
+    proposal_tag = game_instance["proposal_tag"]
+    agree_tag = game_instance["agree_tag"]
+    refusal_tag = game_instance["refusal_tag"]
+
+    # --- Compute Pareto sets ---
+    n_items = len(item_weights)
+    given_sets = game_instance.get("pareto_optima_sets", [])
+
+    if given_sets:  # use provided Pareto sets
+        pareto_sets = [frozenset(s) for s in given_sets]
+    elif n_items <= 15:  # compute if feasible
+        def all_subsets(iterable):
+            s = list(iterable)
+            return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+
+        def evaluate_set(items):
+            total_weight = sum(item_weights.get(i, 0) for i in items)
+            u1 = sum(p1_prefs.get(i, 0) for i in items)
+            u2 = sum(p2_prefs.get(i, 0) for i in items)
+            return total_weight, u1, u2
+
+        all_candidates = []
+        for subset in all_subsets(item_weights.keys()):
+            total_weight, u1, u2 = evaluate_set(subset)
+            if total_weight <= game_instance["max_weight"]:
+                all_candidates.append((frozenset(subset), u1, u2))
+
+        # filter Pareto frontier
+        pareto_sets = []
+        for s, u1, u2 in all_candidates:
+            dominated = False
+            for _, v1, v2 in all_candidates:
+                if v1 >= u1 and v2 >= u2 and (v1 > u1 or v2 > u2):
+                    dominated = True
+                    break
+            if not dominated:
+                pareto_sets.append(s)
+    else:  # too many items
+        pareto_sets = None
 
     def is_pareto(items):
         if pareto_sets is None:
@@ -28,7 +68,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         return total_weight, u1, u2
 
     def score_set(items):
-        """Return full scoring dict for a proposal/agreement set."""
+        """Return full scoring dict for a proposal/agreement/refusal set."""
         total_weight, u1, u2 = evaluate_set(items)
 
         normalized_u1 = (u1 / game_instance["max_u1"] * 100) if game_instance["max_u1"] > 0 else float("NaN")
@@ -78,15 +118,15 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
             v_i = values[item]
             for w in range(max_weight + 1):
                 if w_i > w:
-                    dp[i][w] = dp[i-1][w]
+                    dp[i][w] = dp[i - 1][w]
                 else:
-                    dp[i][w] = max(dp[i-1][w], dp[i-1][w - w_i] + v_i)
+                    dp[i][w] = max(dp[i - 1][w], dp[i - 1][w - w_i] + v_i)
 
         selected_items = set()
         w = max_weight
         for i in range(n, 0, -1):
-            if dp[i][w] != dp[i-1][w]:
-                item = item_list[i-1]
+            if dp[i][w] != dp[i - 1][w]:
+                item = item_list[i - 1]
                 selected_items.add(item)
                 w -= weights[item]
 
@@ -97,6 +137,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         "results_folder": log_data["meta"]["results_folder"],
         "game_id": log_data["meta"]["game_id"],
         "proposals": [],
+        "refusals": [],
         "agreement": None,
         "max_weight": game_instance["max_weight"],
         "scores": {}
@@ -108,32 +149,51 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     for turn in log_data["turns"]:
         turns += 1
         for event in turn:
-            if event["action"]["type"] == "get message":
-                response = event["action"]["content"]
-                actor = event["from"]
+            if event["action"]["type"] != "get message":
+                continue
 
-                if "PROPOSAL:" in response:
-                    try:
-                        set_str = response.split("PROPOSAL:", 1)[1].split("\n", 1)[0].strip()
-                        proposal = ast.literal_eval(set_str)
-                        scored = score_set(proposal)
-                        scored["by"] = actor
-                        scored["turn"] = turns
-                        summary["proposals"].append(scored)
-                    except Exception:
-                        pass
+            response = event["action"]["content"]
+            actor = event["from"]
 
-                if "AGREE:" in response:
-                    try:
-                        set_str = response.split("AGREE:", 1)[1].split("\n", 1)[0].strip()
-                        agreement = ast.literal_eval(set_str)
-                        final_deal = agreement
-                        scored = score_set(agreement)
-                        scored["by"] = actor
-                        scored["turn"] = turns
-                        summary["agreement"] = scored
-                    except Exception:
-                        pass
+            # --- Proposals ---
+            try:
+                proposals_found = re.findall(proposal_tag, response, flags=re.DOTALL)
+                for match in proposals_found:
+                    set_str = match.split(":", 1)[1].strip()
+                    proposal = ast.literal_eval(set_str)
+                    scored = score_set(proposal)
+                    scored["by"] = actor
+                    scored["turn"] = turns
+                    summary["proposals"].append(scored)
+            except Exception:
+                pass
+
+            # --- Agreements ---
+            try:
+                agreements_found = re.findall(agree_tag, response, flags=re.DOTALL)
+                for match in agreements_found:
+                    set_str = match.split(":", 1)[1].strip()
+                    agreement = ast.literal_eval(set_str)
+                    final_deal = agreement
+                    scored = score_set(agreement)
+                    scored["by"] = actor
+                    scored["turn"] = turns
+                    summary["agreement"] = scored
+            except Exception:
+                pass
+
+            # --- Refusals ---
+            try:
+                refusals_found = re.findall(refusal_tag, response, flags=re.DOTALL)
+                for match in refusals_found:
+                    set_str = match.split(":", 1)[1].strip()
+                    refusal = ast.literal_eval(set_str)
+                    scored = score_set(refusal)
+                    scored["by"] = actor
+                    scored["turn"] = turns
+                    summary["refusals"].append(scored)
+            except Exception:
+                pass
 
     # Store maxima
     summary["max_u1"] = game_instance.get("max_u1")
@@ -142,6 +202,15 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
 
     # Ensure proposals are sorted temporally
     summary["proposals"] = sorted(summary["proposals"], key=lambda x: x["turn"])
+    summary["nb_proposals"] = len(summary["proposals"])
+
+    # --- Compute Pareto adherence rate (per-proposal) ---
+    pareto_flags = [p.get("pareto_optimum", None) for p in summary["proposals"]]
+    valid_flags = [flag for flag in pareto_flags if flag is not None]
+    if valid_flags:
+        pareto_adherence_rate = sum(flag is True for flag in valid_flags) / len(valid_flags)
+    else:
+        pareto_adherence_rate = None
 
     # Compute final deal scores
     if final_deal:
@@ -154,7 +223,10 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
             "normalized_harmonic_mean": summary["agreement"]["normalized_harmonic_mean"],
             "episode_score": 100.0 / turns if turns > 0 else 100.0,
             "pareto_optimum": summary["agreement"]["pareto_optimum"],
+            "pareto_adherence_rate": pareto_adherence_rate,
         }
+    else:
+        summary["scores"]["pareto_adherence_rate"] = pareto_adherence_rate
 
     # Individual optima
     best_u1, set_u1 = dp_pseudo_poly_knapsack(item_weights, p1_prefs, game_instance["max_weight"])
@@ -181,7 +253,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
 
         def all_subsets(iterable):
             s = list(iterable)
-            return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+            return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
         for subset in all_subsets(item_list):
             total_weight, u1, u2 = evaluate_set(subset)
