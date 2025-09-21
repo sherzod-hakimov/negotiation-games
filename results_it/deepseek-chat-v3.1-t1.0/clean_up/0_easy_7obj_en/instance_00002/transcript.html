@@ -1,0 +1,791 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+    <style>
+        /* This CSS is an adaptation from the answer by Roko C. Buljan in https://stackoverflow.com/a/71155446 */ 
+
+* {margin: 0; box-sizing: border-box;}
+
+body {background-color: rgb(157, 152, 150);}
+
+  /* dialogue header */
+
+.top-info {
+  text-align: center;
+  --rad: 20px;
+  --rad-sm: 3px;
+  font: 20px/1.5 sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  max-width: 900px;
+  margin: auto;
+  background: #3f3e3e;
+  color: #fff;
+}
+
+.chat {
+    --rad: 20px;
+    --rad-sm: 3px;
+    font: 16px/1.5 sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    max-width: 900px;
+    margin: auto;
+    background: #fff;
+  }
+  
+  .msg {
+    position: relative;
+    max-width: 75%;
+    padding: 7px 15px;
+    margin-bottom: 30px;
+  }
+  
+  /* 5 levels, two players to/from game master and meta messages form game master */
+
+  .msg.b-gm {
+    border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+    background: #874aaf;
+    color: #fff;
+    margin-left: 60%;
+  }
+
+  .msg.a-gm {
+    border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+    background: #f39109;
+    color: #fff;
+    margin-right: 60%;
+  }
+  
+  .msg.gm-a {
+    border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+    background: #c4c3c3;    
+    color: #0c0c0c;
+    margin-right: 40%;
+    margin-left: 20%;
+  }
+
+  .msg.gm-b {
+    border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+    background: #c4c3c3;
+    color: #0c0c0c;
+    margin-right: 20%;
+    margin-left: 40%;
+  }
+
+  .msg.gm-gm {
+    background: #f1f1f1;
+    color: #373636;
+    margin-left: 40%;
+    margin-right: 40%;
+    font-size: 0.8rem;
+
+  }
+  
+  /* speaker labels */
+  
+  .msg::before {
+    content: attr(speaker);
+    font-size: 0.8rem;
+    position: absolute;
+    bottom: 100%;
+    color: #888;
+    white-space: nowrap;
+
+  }
+  
+  .msg.b-gm::before {
+    right: 15px;
+  }
+
+  .msg.gm-a::before {
+    right: 15px;
+  }
+
+  .msg.a-gm::before {
+    left: 15px;
+  }
+
+  .msg.gm-b::before {
+    left: 15px;
+  }
+
+  .msg.gm-gm::before {
+    left: 0px;
+  }
+
+.game-round {
+  padding: 20px 0 20px 0;
+  background-color: #f0f8ff; /* light background for content */
+  position: relative; /* Important to position the badge */
+  border-radius: 10px;
+  margin: 10px 0 10px 0;
+  max-width: 800px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Badge in top-right corner */
+.game-round::before {
+  content: "Round " attr(data-round);
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #c4c3c3;
+  padding: 0px 2px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+    </style>
+</head>
+<body>
+
+<br/>
+
+<div class="top-info">
+    <p>Interaction Transcript for 0_easy_7obj_en, episode 2 with deepseek-chat-v3.1-t1.0.</p>
+</div>
+
+<br/>
+
+<div class="chat">
+<div class="game-round" data-round="0">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:<br/><br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/><br/>```<br/><br/>* Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.<br/>* The following objects are randomly placed on your grid: &#x27;P&#x27;, &#x27;O&#x27;, &#x27;T&#x27;, &#x27;S&#x27;, &#x27;D&#x27;, &#x27;A&#x27;, &#x27;M&#x27;.<br/><br/><br/>L&#x27;altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell&#x27;altro giocatore, e loro non possono vedere il tuo.<br/><br/><br/>**Obiettivo:**<br/><br/>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l&#x27;altro giocatore per concordare una configurazione obiettivo comune.<br/><br/><br/>**Regole:**<br/><br/>* In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:<br/> 1. `COMUNICA: &lt;MESSAGE&gt;`: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all&#x27;altro giocatore. Lo inoltrerò al tuo partner.<br/>2. `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.<br/>* Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.<br/>* If both players accumulate more than 16 penalties, you both lose the game.<br/>* È vitale che comunichi con l&#x27;altro giocatore riguardo al tuo stato obiettivo! L&#x27;*unico* modo in cui puoi trasmettere la tua strategia all&#x27;altro giocatore è usando il comando `COMUNICA: &lt;MESSAGE&gt;`!<br/><br/><br/>**Spostamento Oggetti**<br/><br/>* Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo &#x27;◌&#x27;.<br/>* Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.<br/>* Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!<br/><br/><br/>**Fine del Gioco**<br/><br/>Se pensi di aver raggiunto l&#x27;obiettivo di allineare tutti gli oggetti, puoi chiedere all&#x27;altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l&#x27;altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.<br/><br/>Both players win if the game ends within 28 rounds, where one round is defined as two players each sending a valid command.<br/><br/>**Punteggio:**<br/><br/>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?<br/><br/><br/>Per favore invia un messaggio all&#x27;altro giocatore per iniziare il gioco!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Ciao! Iniziamo a condividere le posizioni degli oggetti sul mio tavolo. Ecco le coordinate dei miei oggetti:  <br/>P: (1,5)  <br/>O: (1,3)  <br/>T: (7,2)  <br/>S: (6,1)  <br/>D: (3,4)  <br/>A: (4,4)  <br/>M: (3,3)  <br/><br/>Per favore condividi le tue coordinate in modo simile, così possiamo concordare una configurazione obiettivo comune.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ciao! Iniziamo a condividere le posizioni degli oggetti sul mio tavolo. Ecco le coordinate dei miei oggetti:  <br/>P: (1,5)  <br/>O: (1,3)  <br/>T: (7,2)  <br/>S: (6,1)  <br/>D: (3,4)  <br/>A: (4,4)  <br/>M: (3,3)  <br/><br/>Per favore condividi le tue coordinate in modo simile, così possiamo concordare una configurazione obiettivo comune.</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: tail is not empty: &#x27;<br/>P: (1,5)  <br/>O: (1,3)  <br/>T: (7,2)  <br/>S: (6,1)  <br/>D: (3,4)  <br/>A: (4,4)  <br/>M: (3,3)  <br/><br/>Per favore condividi le tue coordinate in modo simile, così possiamo concordare una configurazione obiettivo comune.</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla dopo il comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 1 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Ciao! Condivido le mie coordinate: P(1,5) O(1,3) T(7,2) S(6,1) D(3,4) A(4,4) M(3,3). Per favore invia le tue coordinate.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ciao! Condivido le mie coordinate: P(1,5) O(1,3) T(7,2) S(6,1) D(3,4) A(4,4) M(3,3). Per favore invia le tue coordinate.</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:<br/><br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌A◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/><br/>```<br/><br/>* Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.<br/>* The following objects are randomly placed on your grid: &#x27;P&#x27;, &#x27;O&#x27;, &#x27;T&#x27;, &#x27;S&#x27;, &#x27;D&#x27;, &#x27;A&#x27;, &#x27;M&#x27;.<br/><br/><br/>L&#x27;altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell&#x27;altro giocatore, e loro non possono vedere il tuo.<br/><br/><br/>**Obiettivo:**<br/><br/>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l&#x27;altro giocatore per concordare una configurazione obiettivo comune.<br/><br/><br/>**Regole:**<br/><br/>* In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:<br/> 1. `COMUNICA: &lt;MESSAGE&gt;`: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all&#x27;altro giocatore. Lo inoltrerò al tuo partner.<br/>2. `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.<br/>* Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.<br/>* If both players accumulate more than 16 penalties, you both lose the game.<br/>* È vitale che comunichi con l&#x27;altro giocatore riguardo al tuo stato obiettivo! L&#x27;*unico* modo in cui puoi trasmettere la tua strategia all&#x27;altro giocatore è usando il comando `COMUNICA: &lt;MESSAGE&gt;`!<br/><br/><br/>**Spostamento Oggetti**<br/><br/>* Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo &#x27;◌&#x27;.<br/>* Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.<br/>* Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!<br/><br/><br/>**Fine del Gioco**<br/><br/>Se pensi di aver raggiunto l&#x27;obiettivo di allineare tutti gli oggetti, puoi chiedere all&#x27;altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l&#x27;altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.<br/><br/>Both players win if the game ends within 28 rounds, where one round is defined as two players each sending a valid command.<br/><br/>**Punteggio:**<br/><br/>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?<br/><br/>L&#x27;altro giocatore ha iniziato il gioco inviando questo messaggio:<br/><br/>&quot;Ciao! Condivido le mie coordinate: P(1,5) O(1,3) T(7,2) S(6,1) D(3,4) A(4,4) M(3,3). Per favore invia le tue coordinate.&quot;<br/><br/>Qual è il tuo primo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Analizzando la mia griglia:<br/><br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌A◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/><br/>Posso identificare le coordinate dei miei oggetti:<br/><br/>- A: (3,1) <br/>- P: (3,2)<br/>- O: (5,2)<br/>- S: (1,3)<br/>- D: (4,6)<br/>- T: (1,7)<br/>- M: (3,7)<br/><br/>L&#x27;altro giocatore ha condiviso le sue coordinate: P(1,5) O(1,3) T(7,2) S(6,1) D(3,4) A(4,4) M(3,3)<br/><br/>Per iniziare la coordinazione, devo rispondere con le mie coordinate.<br/><br/>COMUNICA: Le mie coordinate: A(3,1) P(3,2) O(5,2) S(1,3) D(4,6) T(1,7) M(3,7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Analizzando la mia griglia:<br/><br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌A◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/><br/>Posso identificare le coordinate dei miei oggetti:<br/><br/>- A: (3,1) <br/>- P: (3,2)<br/>- O: (5,2)<br/>- S: (1,3)<br/>- D: (4,6)<br/>- T: (1,7)<br/>- M: (3,7)<br/><br/>L&#x27;altro giocatore ha condiviso le sue coordinate: P(1,5) O(1,3) T(7,2) S(6,1) D(3,4) A(4,4) M(3,3)<br/><br/>Per iniziare la coordinazione, devo rispondere con le mie coordinate.<br/><br/>COMUNICA: Le mie coordinate: A(3,1) P(3,2) O(5,2) S(1,3) D(4,6) T(1,7) M(3,7)</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Analizzando la mia griglia:<br/><br/><br/> 1234567<br/>╔═══════╗<br/>║◌◌A◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/><br/><br/>Posso identificare le coordinate dei miei oggetti:<br/><br/>- A: (3,1) <br/>- P: (3,2)<br/>- O: (5,2)<br/>- S: (1,3)<br/>- D: (4,6)<br/>- T: (1,7)<br/>- M: (3,7)<br/><br/>L&#x27;altro giocatore ha condiviso le sue coordinate: P(1,5) O(1,3) T(7,2) S(6,1) D(3,4) A(4,4) M(3,3)<br/><br/>Per iniziare la coordinazione, devo rispondere con le mie coordinate.<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 2 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Le mie coordinate: A(3,1) P(3,2) O(5,2) S(1,3) D(4,6) T(1,7) M(3,7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Le mie coordinate: A(3,1) P(3,2) O(5,2) S(1,3) D(4,6) T(1,7) M(3,7)</p>
+    </div>
+</div><div class="game-round" data-round="1">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 1 of maximum 28.<br/>You have collectively accumulated 2 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Le mie coordinate: A(3,1) P(3,2) O(5,2) S(1,3) D(4,6) T(1,7) M(3,7)&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Ok, vedo le tue coordinate. Proponiamo di allineare tutti gli oggetti nella riga 4 per semplicità? Ad esempio: P(1,4) O(2,4) T(3,4) S(4,4) D(5,4) A(6,4) M(7,4). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ok, vedo le tue coordinate. Proponiamo di allineare tutti gli oggetti nella riga 4 per semplicità? Ad esempio: P(1,4) O(2,4) T(3,4) S(4,4) D(5,4) A(6,4) M(7,4). Confermi?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 2 of maximum 28.<br/>You have collectively accumulated 2 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Ok, vedo le tue coordinate. Proponiamo di allineare tutti gli oggetti nella riga 4 per semplicità? Ad esempio: P(1,4) O(2,4) T(3,4) S(4,4) D(5,4) A(6,4) M(7,4). Confermi?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Confermo l&#x27;allineamento nella riga 4: P(1,4) O(2,4) T(3,4) S(4,4) D(5,4) A(6,4) M(7,4). Inizio a spostare i miei oggetti.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Confermo l&#x27;allineamento nella riga 4: P(1,4) O(2,4) T(3,4) S(4,4) D(5,4) A(6,4) M(7,4). Inizio a spostare i miei oggetti.</p>
+    </div>
+</div><div class="game-round" data-round="2">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 2 of maximum 28.<br/>You have collectively accumulated 2 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Confermo l&#x27;allineamento nella riga 4: P(1,4) O(2,4) T(3,4) S(4,4) D(5,4) A(6,4) M(7,4). Inizio a spostare i miei oggetti.&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: P, (1,4)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: P, (1,4)</p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p>Penalità: (1,4) non è vuoto, ma contiene &#x27;─&#x27;.<br/><br/>You have collectively accumulated 3 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: (1,4) non è vuoto, ma contiene &#x27;─&#x27;.<br/><br/>You have collectively accumulated 3 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: P, (2,4)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: P, (2,4)</p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p>Penalità: (2,4) non è vuoto, ma contiene &#x27;─&#x27;.<br/><br/>You have collectively accumulated 4 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: (2,4) non è vuoto, ma contiene &#x27;─&#x27;.<br/><br/>You have collectively accumulated 4 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: P, (1,6)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: P, (1,6)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;P&#x27; in (1,6) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║P◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 3 of maximum 28.<br/>You have collectively accumulated 4 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: A, (6,4)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: A, (6,4)</p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p>Penalità: (6,4) non è vuoto, ma contiene &#x27;│&#x27;.<br/><br/>You have collectively accumulated 5 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: (6,4) non è vuoto, ma contiene &#x27;│&#x27;.<br/><br/>You have collectively accumulated 5 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Analizzo la griglia: nella posizione (6,4) c&#x27;è un muro verticale &#x27;│&#x27;. Devo trovare una posizione libera sulla riga 4 per spostare l&#x27;oggetto A.<br/><br/>Controllo la riga 4 sulla mia griglia:<br/>╟──┐◌◌│◌║ 4<br/>- (1,4): ─ (muro)<br/>- (2,4): ─ (muro)<br/>- (3,4): ┐ (muro)<br/>- (4,4): ◌ (libero)<br/>- (5,4): ◌ (libero)<br/>- (6,4): │ (muro)<br/>- (7,4): ◌ (libero)<br/><br/>Le posizioni libere sulla riga 4 sono: (4,4), (5,4), (7,4)<br/><br/>Poiché l&#x27;obiettivo concordato è A(6,4) ma non è disponibile, scelgo la posizione libera più vicina: (7,4)<br/><br/>SPOSTA: A, (7,4)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Analizzo la griglia: nella posizione (6,4) c&#x27;è un muro verticale &#x27;│&#x27;. Devo trovare una posizione libera sulla riga 4 per spostare l&#x27;oggetto A.<br/><br/>Controllo la riga 4 sulla mia griglia:<br/>╟──┐◌◌│◌║ 4<br/>- (1,4): ─ (muro)<br/>- (2,4): ─ (muro)<br/>- (3,4): ┐ (muro)<br/>- (4,4): ◌ (libero)<br/>- (5,4): ◌ (libero)<br/>- (6,4): │ (muro)<br/>- (7,4): ◌ (libero)<br/><br/>Le posizioni libere sulla riga 4 sono: (4,4), (5,4), (7,4)<br/><br/>Poiché l&#x27;obiettivo concordato è A(6,4) ma non è disponibile, scelgo la posizione libera più vicina: (7,4)<br/><br/>SPOSTA: A, (7,4)</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Analizzo la griglia: nella posizione (6,4) c&#x27;è un muro verticale &#x27;│&#x27;. Devo trovare una posizione libera sulla riga 4 per spostare l&#x27;oggetto A.<br/><br/>Controllo la riga 4 sulla mia griglia:<br/>╟──┐◌◌│◌║ 4<br/>- (1,4): ─ (muro)<br/>- (2,4): ─ (muro)<br/>- (3,4): ┐ (muro)<br/>- (4,4): ◌ (libero)<br/>- (5,4): ◌ (libero)<br/>- (6,4): │ (muro)<br/>- (7,4): ◌ (libero)<br/><br/>Le posizioni libere sulla riga 4 sono: (4,4), (5,4), (7,4)<br/><br/>Poiché l&#x27;obiettivo concordato è A(6,4) ma non è disponibile, scelgo la posizione libera più vicina: (7,4)<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 6 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: A, (7,4)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: A, (7,4)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;A&#x27; in (7,4) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="3">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;P&#x27; in (1,6) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║P◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 3 of maximum 28.<br/>You have collectively accumulated 6 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: O, (2,4)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: O, (2,4)</p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p>Penalità: (2,4) non è vuoto, ma contiene &#x27;─&#x27;.<br/><br/>You have collectively accumulated 7 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: (2,4) non è vuoto, ma contiene &#x27;─&#x27;.<br/><br/>You have collectively accumulated 7 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Attenzione: la riga 4 ha molti simboli di cornice. Sposterò gli oggetti nella riga 6 invece? Proponi riga 6: P(1,6) O(2,6) T(3,6) S(4,6) D(5,6) A(6,6) M(7,6). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Attenzione: la riga 4 ha molti simboli di cornice. Sposterò gli oggetti nella riga 6 invece? Proponi riga 6: P(1,6) O(2,6) T(3,6) S(4,6) D(5,6) A(6,6) M(7,6). Confermi?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;A&#x27; in (7,4) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 4 of maximum 28.<br/>You have collectively accumulated 7 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Attenzione: la riga 4 ha molti simboli di cornice. Sposterò gli oggetti nella riga 6 invece? Proponi riga 6: P(1,6) O(2,6) T(3,6) S(4,6) D(5,6) A(6,6) M(7,6). Confermi?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Confermo riga 6: P(1,6) O(2,6) T(3,6) S(4,6) D(5,6) A(6,6) M(7,6). Sposto i miei oggetti.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Confermo riga 6: P(1,6) O(2,6) T(3,6) S(4,6) D(5,6) A(6,6) M(7,6). Sposto i miei oggetti.</p>
+    </div>
+</div><div class="game-round" data-round="4">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 4 of maximum 28.<br/>You have collectively accumulated 7 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Confermo riga 6: P(1,6) O(2,6) T(3,6) S(4,6) D(5,6) A(6,6) M(7,6). Sposto i miei oggetti.&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: O, (2,6)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: O, (2,6)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;O&#x27; in (2,6) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║◌◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 5 of maximum 28.<br/>You have collectively accumulated 7 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Controllo la riga 6 sulla mia griglia attuale:<br/>║◌◌│D◌│◌║ 6<br/><br/>- (1,6): ◌ (libero)<br/>- (2,6): ◌ (libero)<br/>- (3,6): │ (muro)<br/>- (4,6): D (occupato dal mio D)<br/>- (5,6): ◌ (libero)<br/>- (6,6): │ (muro)<br/>- (7,6): ◌ (libero)<br/><br/>Devo spostare il mio D dalla posizione (4,6) per liberare lo spazio per S(4,6). Prima sposto D alla sua nuova posizione obiettivo D(5,6).<br/><br/>SPOSTA: D, (5,6)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Controllo la riga 6 sulla mia griglia attuale:<br/>║◌◌│D◌│◌║ 6<br/><br/>- (1,6): ◌ (libero)<br/>- (2,6): ◌ (libero)<br/>- (3,6): │ (muro)<br/>- (4,6): D (occupato dal mio D)<br/>- (5,6): ◌ (libero)<br/>- (6,6): │ (muro)<br/>- (7,6): ◌ (libero)<br/><br/>Devo spostare il mio D dalla posizione (4,6) per liberare lo spazio per S(4,6). Prima sposto D alla sua nuova posizione obiettivo D(5,6).<br/><br/>SPOSTA: D, (5,6)</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Controllo la riga 6 sulla mia griglia attuale:<br/>║◌◌│D◌│◌║ 6<br/><br/>- (1,6): ◌ (libero)<br/>- (2,6): ◌ (libero)<br/>- (3,6): │ (muro)<br/>- (4,6): D (occupato dal mio D)<br/>- (5,6): ◌ (libero)<br/>- (6,6): │ (muro)<br/>- (7,6): ◌ (libero)<br/><br/>Devo spostare il mio D dalla posizione (4,6) per liberare lo spazio per S(4,6). Prima sposto D alla sua nuova posizione obiettivo D(5,6).<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 8 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: D, (5,6)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: D, (5,6)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;D&#x27; in (5,6) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌D│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="5">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;O&#x27; in (2,6) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║◌◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 5 of maximum 28.<br/>You have collectively accumulated 8 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: T, (3,6)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: T, (3,6)</p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p>Penalità: (3,6) non è vuoto, ma contiene &#x27;│&#x27;.<br/><br/>You have collectively accumulated 9 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: (3,6) non è vuoto, ma contiene &#x27;│&#x27;.<br/><br/>You have collectively accumulated 9 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: T, (7,1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: T, (7,1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;T&#x27; in (7,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌ST║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║◌◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;D&#x27; in (5,6) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌D│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 6 of maximum 28.<br/>You have collectively accumulated 9 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Ora posso spostare S alla sua posizione obiettivo (4,6). Controllo che (4,6) sia libero: nella griglia aggiornata, (4,6) mostra &#x27;│&#x27; (un muro), quindi non è libero.<br/><br/>Controllo nuovamente la riga 6:<br/>║◌◌│◌D│◌║ 6<br/>- (1,6): ◌ (libero)<br/>- (2,6): ◌ (libero) <br/>- (3,6): │ (muro)<br/>- (4,6): │ (muro) - non libero<br/>- (5,6): D (occupato)<br/>- (6,6): │ (muro)<br/>- (7,6): ◌ (libero)<br/><br/>La posizione (4,6) non è libera perché contiene un muro. Devo informare l&#x27;altro giocatore che la riga 6 ha ostacoli.<br/><br/>COMUNICA: Attenzione: riga 6 ha muri alle posizioni (3,6), (4,6), (6,6). Proponi riga 5 invece?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Ora posso spostare S alla sua posizione obiettivo (4,6). Controllo che (4,6) sia libero: nella griglia aggiornata, (4,6) mostra &#x27;│&#x27; (un muro), quindi non è libero.<br/><br/>Controllo nuovamente la riga 6:<br/>║◌◌│◌D│◌║ 6<br/>- (1,6): ◌ (libero)<br/>- (2,6): ◌ (libero) <br/>- (3,6): │ (muro)<br/>- (4,6): │ (muro) - non libero<br/>- (5,6): D (occupato)<br/>- (6,6): │ (muro)<br/>- (7,6): ◌ (libero)<br/><br/>La posizione (4,6) non è libera perché contiene un muro. Devo informare l&#x27;altro giocatore che la riga 6 ha ostacoli.<br/><br/>COMUNICA: Attenzione: riga 6 ha muri alle posizioni (3,6), (4,6), (6,6). Proponi riga 5 invece?</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Ora posso spostare S alla sua posizione obiettivo (4,6). Controllo che (4,6) sia libero: nella griglia aggiornata, (4,6) mostra &#x27;│&#x27; (un muro), quindi non è libero.<br/><br/>Controllo nuovamente la riga 6:<br/>║◌◌│◌D│◌║ 6<br/>- (1,6): ◌ (libero)<br/>- (2,6): ◌ (libero) <br/>- (3,6): │ (muro)<br/>- (4,6): │ (muro) - non libero<br/>- (5,6): D (occupato)<br/>- (6,6): │ (muro)<br/>- (7,6): ◌ (libero)<br/><br/>La posizione (4,6) non è libera perché contiene un muro. Devo informare l&#x27;altro giocatore che la riga 6 ha ostacoli.<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 10 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Attenzione: riga 6 ha muri alle posizioni (3,6), (4,6), (6,6). Proponi riga 5 invece?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Attenzione: riga 6 ha muri alle posizioni (3,6), (4,6), (6,6). Proponi riga 5 invece?</p>
+    </div>
+</div><div class="game-round" data-round="6">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;T&#x27; in (7,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌ST║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║◌◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 6 of maximum 28.<br/>You have collectively accumulated 10 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Attenzione: riga 6 ha muri alle posizioni (3,6), (4,6), (6,6). Proponi riga 5 invece?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Sì, riga 5 è meglio. Proponi: P(1,5) O(2,5) T(3,5) S(4,5) D(5,5) A(6,5) M(7,5). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Sì, riga 5 è meglio. Proponi: P(1,5) O(2,5) T(3,5) S(4,5) D(5,5) A(6,5) M(7,5). Confermi?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 7 of maximum 28.<br/>You have collectively accumulated 10 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Sì, riga 5 è meglio. Proponi: P(1,5) O(2,5) T(3,5) S(4,5) D(5,5) A(6,5) M(7,5). Confermi?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Confermo riga 5: P(1,5) O(2,5) T(3,5) S(4,5) D(5,5) A(6,5) M(7,5). Inizio a spostare.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Confermo riga 5: P(1,5) O(2,5) T(3,5) S(4,5) D(5,5) A(6,5) M(7,5). Inizio a spostare.</p>
+    </div>
+</div><div class="game-round" data-round="7">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 7 of maximum 28.<br/>You have collectively accumulated 10 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Confermo riga 5: P(1,5) O(2,5) T(3,5) S(4,5) D(5,5) A(6,5) M(7,5). Inizio a spostare.&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: T, (3,5)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: T, (3,5)</p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p>Penalità: (3,5) non è vuoto, ma contiene &#x27;├&#x27;.<br/><br/>You have collectively accumulated 11 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: (3,5) non è vuoto, ma contiene &#x27;├&#x27;.<br/><br/>You have collectively accumulated 11 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Riga 5 ha muri. Proponi riga 7: P(1,7) O(2,7) T(3,7) S(4,7) D(5,7) A(6,7) M(7,7). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Riga 5 ha muri. Proponi riga 7: P(1,7) O(2,7) T(3,7) S(4,7) D(5,7) A(6,7) M(7,7). Confermi?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 8 of maximum 28.<br/>You have collectively accumulated 11 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Riga 5 ha muri. Proponi riga 7: P(1,7) O(2,7) T(3,7) S(4,7) D(5,7) A(6,7) M(7,7). Confermi?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Controllo la riga 7 sulla mia griglia:<br/>║T◌│M◌│◌║ 7<br/>- (1,7): T (occupato dal mio T)<br/>- (2,7): ◌ (libero)<br/>- (3,7): │ (muro)<br/>- (4,7): M (occupato dal mio M)<br/>- (5,7): │ (muro)<br/>- (6,7): ◌ (libero)<br/>- (7,7): ◌ (libero)<br/><br/>La riga 7 ha muri alle posizioni (3,7) e (5,7), quindi non tutti i posti sono disponibili. Devo informare l&#x27;altro giocatore.<br/><br/>COMUNICA: Riga 7 ha muri su (3,7) e (5,7). Proponi riga 3: P(1,3) O(2,3) T(3,3) S(4,3) D(5,3) A(6,3) M(7,3)?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Controllo la riga 7 sulla mia griglia:<br/>║T◌│M◌│◌║ 7<br/>- (1,7): T (occupato dal mio T)<br/>- (2,7): ◌ (libero)<br/>- (3,7): │ (muro)<br/>- (4,7): M (occupato dal mio M)<br/>- (5,7): │ (muro)<br/>- (6,7): ◌ (libero)<br/>- (7,7): ◌ (libero)<br/><br/>La riga 7 ha muri alle posizioni (3,7) e (5,7), quindi non tutti i posti sono disponibili. Devo informare l&#x27;altro giocatore.<br/><br/>COMUNICA: Riga 7 ha muri su (3,7) e (5,7). Proponi riga 3: P(1,3) O(2,3) T(3,3) S(4,3) D(5,3) A(6,3) M(7,3)?</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Controllo la riga 7 sulla mia griglia:<br/>║T◌│M◌│◌║ 7<br/>- (1,7): T (occupato dal mio T)<br/>- (2,7): ◌ (libero)<br/>- (3,7): │ (muro)<br/>- (4,7): M (occupato dal mio M)<br/>- (5,7): │ (muro)<br/>- (6,7): ◌ (libero)<br/>- (7,7): ◌ (libero)<br/><br/>La riga 7 ha muri alle posizioni (3,7) e (5,7), quindi non tutti i posti sono disponibili. Devo informare l&#x27;altro giocatore.<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 12 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Riga 7 ha muri su (3,7) e (5,7). Proponi riga 3: P(1,3) O(2,3) T(3,3) S(4,3) D(5,3) A(6,3) M(7,3)?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Riga 7 ha muri su (3,7) e (5,7). Proponi riga 3: P(1,3) O(2,3) T(3,3) S(4,3) D(5,3) A(6,3) M(7,3)?</p>
+    </div>
+</div><div class="game-round" data-round="8">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 8 of maximum 28.<br/>You have collectively accumulated 12 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Riga 7 ha muri su (3,7) e (5,7). Proponi riga 3: P(1,3) O(2,3) T(3,3) S(4,3) D(5,3) A(6,3) M(7,3)?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Riga 3 ha M a (3,3) e muro a (6,3). Proponi riga 2: P(1,2) O(2,2) T(3,2) S(4,2) D(5,2) A(6,2) M(7,2). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Riga 3 ha M a (3,3) e muro a (6,3). Proponi riga 2: P(1,2) O(2,2) T(3,2) S(4,2) D(5,2) A(6,2) M(7,2). Confermi?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 9 of maximum 28.<br/>You have collectively accumulated 12 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Riga 3 ha M a (3,3) e muro a (6,3). Proponi riga 2: P(1,2) O(2,2) T(3,2) S(4,2) D(5,2) A(6,2) M(7,2). Confermi?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Confermo riga 2: P(1,2) O(2,2) T(3,2) S(4,2) D(5,2) A(6,2) M(7,2). Sposto i miei oggetti.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Confermo riga 2: P(1,2) O(2,2) T(3,2) S(4,2) D(5,2) A(6,2) M(7,2). Sposto i miei oggetti.</p>
+    </div>
+</div><div class="game-round" data-round="9">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 9 of maximum 28.<br/>You have collectively accumulated 12 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Confermo riga 2: P(1,2) O(2,2) T(3,2) S(4,2) D(5,2) A(6,2) M(7,2). Sposto i miei oggetti.&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: S, (4,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: S, (4,2)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;S&#x27; in (4,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌T║ 1<br/>║◌◌◌S◌◌◌║ 2<br/>║◌◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 10 of maximum 28.<br/>You have collectively accumulated 12 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Controllo la riga 2 sulla mia griglia attuale:<br/>║◌◌P◌O◌◌║ 2<br/><br/>- (1,2): ◌ (libero)<br/>- (2,2): ◌ (libero)<br/>- (3,2): P (occupato dal mio P)<br/>- (4,2): ◌ (libero)<br/>- (5,2): O (occupato dal mio O)<br/>- (6,2): ◌ (libero)<br/>- (7,2): ◌ (libero)<br/><br/>Inizio spostando il mio P dalla posizione (3,2) alla sua nuova posizione obiettivo P(1,2).<br/><br/>SPOSTA: P, (1,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Controllo la riga 2 sulla mia griglia attuale:<br/>║◌◌P◌O◌◌║ 2<br/><br/>- (1,2): ◌ (libero)<br/>- (2,2): ◌ (libero)<br/>- (3,2): P (occupato dal mio P)<br/>- (4,2): ◌ (libero)<br/>- (5,2): O (occupato dal mio O)<br/>- (6,2): ◌ (libero)<br/>- (7,2): ◌ (libero)<br/><br/>Inizio spostando il mio P dalla posizione (3,2) alla sua nuova posizione obiettivo P(1,2).<br/><br/>SPOSTA: P, (1,2)</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Controllo la riga 2 sulla mia griglia attuale:<br/>║◌◌P◌O◌◌║ 2<br/><br/>- (1,2): ◌ (libero)<br/>- (2,2): ◌ (libero)<br/>- (3,2): P (occupato dal mio P)<br/>- (4,2): ◌ (libero)<br/>- (5,2): O (occupato dal mio O)<br/>- (6,2): ◌ (libero)<br/>- (7,2): ◌ (libero)<br/><br/>Inizio spostando il mio P dalla posizione (3,2) alla sua nuova posizione obiettivo P(1,2).<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 13 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: P, (1,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: P, (1,2)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;P&#x27; in (1,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║P◌◌◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌D│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="10">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;S&#x27; in (4,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌T║ 1<br/>║◌◌◌S◌◌◌║ 2<br/>║◌◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 10 of maximum 28.<br/>You have collectively accumulated 13 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: T, (3,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: T, (3,2)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;T&#x27; in (3,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌TS◌◌◌║ 2<br/>║◌◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;P&#x27; in (1,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║P◌◌◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌D│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 11 of maximum 28.<br/>You have collectively accumulated 13 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Ora sposto il mio O dalla posizione (5,2) alla sua nuova posizione obiettivo O(2,2).<br/><br/>SPOSTA: O, (2,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Ora sposto il mio O dalla posizione (5,2) alla sua nuova posizione obiettivo O(2,2).<br/><br/>SPOSTA: O, (2,2)</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Ora sposto il mio O dalla posizione (5,2) alla sua nuova posizione obiettivo O(2,2).<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 14 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: O, (2,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: O, (2,2)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;O&#x27; in (2,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║PO◌◌◌◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌D│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="11">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;T&#x27; in (3,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌TS◌◌◌║ 2<br/>║◌◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 11 of maximum 28.<br/>You have collectively accumulated 14 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: M, (7,2)     <br/><br/>I notice that M is currently at (3,3) and I need to move it to (7,2) according to our agreed configuration. Let me check if (7,2) is empty. From the grid, position (7,2) should be empty now since we moved T away from there earlier (T was at (7,1) and then moved to (3,2)). Looking at the current grid, (7,2) is shown as empty (◌) in row 2.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: M, (7,2)     <br/><br/>I notice that M is currently at (3,3) and I need to move it to (7,2) according to our agreed configuration. Let me check if (7,2) is empty. From the grid, position (7,2) should be empty now since we moved T away from there earlier (T was at (7,1) and then moved to (3,2)). Looking at the current grid, (7,2) is shown as empty (◌) in row 2.</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: tail is not empty: &#x27;     <br/><br/>I notice that M is currently at (3,3) and I need to move it to (7,2) according to our agreed configuration. Let me check if (7,2) is empty. From the grid, position (7,2) should be empty now since we moved T away from there earlier (T was at (7,1) and then moved to (3,2)). Looking at the current grid, (7,2) is shown as empty (◌) in row 2.</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla dopo il comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 15 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: M, (7,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: M, (7,2)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;M&#x27; in (7,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌TS◌◌M║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;O&#x27; in (2,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║PO◌◌◌◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌D│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 12 of maximum 28.<br/>You have collectively accumulated 15 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Ora sposto il mio S dalla posizione (1,3) alla sua nuova posizione obiettivo S(4,2).<br/><br/>SPOSTA: S, (4,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Ora sposto il mio S dalla posizione (1,3) alla sua nuova posizione obiettivo S(4,2).<br/><br/>SPOSTA: S, (4,2)</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Ora sposto il mio S dalla posizione (1,3) alla sua nuova posizione obiettivo S(4,2).<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 16 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: S, (4,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: S, (4,2)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;S&#x27; in (4,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║PO◌S◌◌◌║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌D│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="12">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;M&#x27; in (7,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌TS◌◌M║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 12 of maximum 28.<br/>You have collectively accumulated 16 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: D, (5,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: D, (5,2)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;D&#x27; in (5,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║◌◌TSD◌M║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌A│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║PO│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;S&#x27; in (4,2) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌◌◌║ 1<br/>║PO◌S◌◌◌║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│A║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌D│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 13 of maximum 28.<br/>You have collectively accumulated 16 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Ora sposto il mio T dalla posizione (1,7) alla sua nuova posizione obiettivo T(3,2).<br/><br/>SPOSTA: T, (3,2)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Ora sposto il mio T dalla posizione (1,7) alla sua nuova posizione obiettivo T(3,2).<br/><br/>SPOSTA: T, (3,2)</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Ora sposto il mio T dalla posizione (1,7) alla sua nuova posizione obiettivo T(3,2).<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="Game Master: end" class="msg gm-gm" style="">
+        <p>Maximum number of penalties exceeded</p>
+    </div>
+
+    <div speaker="Game Master: game_finished" class="msg gm-gm" style="">
+        <p>* success: False<br/>* lose: True<br/>* aborted: True<br/>-------<br/>* Shifts: 11.00<br/>* Max Shifts: 12.00<br/>* Min Shifts: 6.00<br/>* End Distance Sum: 25.22<br/>* Init Distance Sum: 30.65<br/>* Expected Distance Sum: 29.33<br/>* Penalties: 17.00<br/>* Max Penalties: 16.00<br/>* Rounds: 12.00<br/>* Max Rounds: 28.00<br/>* Object Count: 7.00<br/></p>
+    </div>
+
+    <div speaker="Game Master: dev:game_finished" class="msg gm-gm" style="">
+        <p>* Main Score: 0.00<br/><br/>-------<br/>* Distance Score: 0.16<br/>* Consistency Score: 0.29<br/>* Coverage Score: 0.66<br/>* Penalty Score: 0.00<br/>* Alternative Penalty Score: 0.00<br/>* Alternative Main Score: 0.00<br/><br/>-------<br/>* Shifts: 11.00<br/>* Max Shifts: 12.00<br/>* Min Shifts: 6.00<br/>* End Distance Sum: 25.22<br/>* Init Distance Sum: 30.65<br/>* Expected Distance Sum: 29.33<br/>* Penalties: 17.00<br/>* Max Penalties: 16.00<br/>* Rounds: 12.00<br/>* Max Rounds: 28.00<br/>* Object Count: 7.00<br/></p>
+    </div>
+</div>
+</div>
+
+</body>
+</html>
