@@ -137,31 +137,28 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         "game_id": log_data["meta"]["game_id"],
         "proposals": [],
         "refusals": [],
-        "agreement": log_data["final deal"],
+        "agreement": None,
         "max_weight": game_instance["max_weight"],
         "scores": {}
     }
 
     turns = 0
-    final_deal = None
-
     for turn in log_data["turns"]:
         turns += 1
         for event in turn:
-            if (
-                    event["from"] == "GM"
-                    and isinstance(event["action"].get("content"), str)
-                    and not event["action"]["content"].startswith("You are participating")
+            if (event["from"] == "GM"
+                and isinstance(event["action"].get("content"), str)
             ):
 
                 # --- Proposals ---
-
                 response = event["action"]["content"]
                 # the actor is the one who sent the message to GM so not the receiver
                 actor = "Player 1" if event["to"] == "Player 2" else "Player 2"
 
                 try:
+                    response = event["action"]["content"]
                     proposals_found = re.findall(proposal_tag, response, flags=re.DOTALL)
+                    proposals_found = [proposal for proposal in proposals_found if "{'A', 'B', 'C', …}" not in proposal]
                     for match in proposals_found:
                         set_str = match.split(":", 1)[1].strip()
                         proposal = ast.literal_eval(set_str)
@@ -184,6 +181,12 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
                         summary["refusals"].append(scored)
                 except Exception:
                     pass
+
+    if log_data["final deal"]:
+        scored_agreement = score_set(log_data["final deal"])
+        scored_agreement["by"] = 'Player'  # or leave out if not relevant
+        scored_agreement["turn"] = turns  # maybe set to total turns
+        summary["agreement"] = scored_agreement
 
     # Store maxima
     summary["max_u1"] = game_instance.get("max_u1")
@@ -228,7 +231,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     summary["normalized_substitutions_per_proposal"] = normalized_changes
 
     # Compute final deal scores
-    if final_deal:
+    if log_data["final deal"]:
         summary["scores"] = {
             "player1_score": summary["agreement"]["utility_player1"],
             "player2_score": summary["agreement"]["utility_player2"],
