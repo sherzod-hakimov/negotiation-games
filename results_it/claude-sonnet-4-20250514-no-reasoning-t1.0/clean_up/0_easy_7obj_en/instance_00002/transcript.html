@@ -1,0 +1,911 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+    <style>
+        /* This CSS is an adaptation from the answer by Roko C. Buljan in https://stackoverflow.com/a/71155446 */ 
+
+* {margin: 0; box-sizing: border-box;}
+
+body {background-color: rgb(157, 152, 150);}
+
+  /* dialogue header */
+
+.top-info {
+  text-align: center;
+  --rad: 20px;
+  --rad-sm: 3px;
+  font: 20px/1.5 sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  max-width: 900px;
+  margin: auto;
+  background: #3f3e3e;
+  color: #fff;
+}
+
+.chat {
+    --rad: 20px;
+    --rad-sm: 3px;
+    font: 16px/1.5 sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    max-width: 900px;
+    margin: auto;
+    background: #fff;
+  }
+  
+  .msg {
+    position: relative;
+    max-width: 75%;
+    padding: 7px 15px;
+    margin-bottom: 30px;
+  }
+  
+  /* 5 levels, two players to/from game master and meta messages form game master */
+
+  .msg.b-gm {
+    border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+    background: #874aaf;
+    color: #fff;
+    margin-left: 60%;
+  }
+
+  .msg.a-gm {
+    border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+    background: #f39109;
+    color: #fff;
+    margin-right: 60%;
+  }
+  
+  .msg.gm-a {
+    border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+    background: #c4c3c3;    
+    color: #0c0c0c;
+    margin-right: 40%;
+    margin-left: 20%;
+  }
+
+  .msg.gm-b {
+    border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+    background: #c4c3c3;
+    color: #0c0c0c;
+    margin-right: 20%;
+    margin-left: 40%;
+  }
+
+  .msg.gm-gm {
+    background: #f1f1f1;
+    color: #373636;
+    margin-left: 40%;
+    margin-right: 40%;
+    font-size: 0.8rem;
+
+  }
+  
+  /* speaker labels */
+  
+  .msg::before {
+    content: attr(speaker);
+    font-size: 0.8rem;
+    position: absolute;
+    bottom: 100%;
+    color: #888;
+    white-space: nowrap;
+
+  }
+  
+  .msg.b-gm::before {
+    right: 15px;
+  }
+
+  .msg.gm-a::before {
+    right: 15px;
+  }
+
+  .msg.a-gm::before {
+    left: 15px;
+  }
+
+  .msg.gm-b::before {
+    left: 15px;
+  }
+
+  .msg.gm-gm::before {
+    left: 0px;
+  }
+
+.game-round {
+  padding: 20px 0 20px 0;
+  background-color: #f0f8ff; /* light background for content */
+  position: relative; /* Important to position the badge */
+  border-radius: 10px;
+  margin: 10px 0 10px 0;
+  max-width: 800px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Badge in top-right corner */
+.game-round::before {
+  content: "Round " attr(data-round);
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #c4c3c3;
+  padding: 0px 2px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+    </style>
+</head>
+<body>
+
+<br/>
+
+<div class="top-info">
+    <p>Interaction Transcript for 0_easy_7obj_en, episode 2 with claude-sonnet-4-20250514-no-reasoning-t1.0.</p>
+</div>
+
+<br/>
+
+<div class="chat">
+<div class="game-round" data-round="0">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:<br/><br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌M┌─╢ 3<br/>╟──┐DA│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/><br/>```<br/><br/>* Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.<br/>* The following objects are randomly placed on your grid: &#x27;P&#x27;, &#x27;O&#x27;, &#x27;T&#x27;, &#x27;S&#x27;, &#x27;D&#x27;, &#x27;A&#x27;, &#x27;M&#x27;.<br/><br/><br/>L&#x27;altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell&#x27;altro giocatore, e loro non possono vedere il tuo.<br/><br/><br/>**Obiettivo:**<br/><br/>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l&#x27;altro giocatore per concordare una configurazione obiettivo comune.<br/><br/><br/>**Regole:**<br/><br/>* In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:<br/> 1. `COMUNICA: &lt;MESSAGE&gt;`: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all&#x27;altro giocatore. Lo inoltrerò al tuo partner.<br/>2. `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.<br/>* Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.<br/>* If both players accumulate more than 16 penalties, you both lose the game.<br/>* È vitale che comunichi con l&#x27;altro giocatore riguardo al tuo stato obiettivo! L&#x27;*unico* modo in cui puoi trasmettere la tua strategia all&#x27;altro giocatore è usando il comando `COMUNICA: &lt;MESSAGE&gt;`!<br/><br/><br/>**Spostamento Oggetti**<br/><br/>* Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo &#x27;◌&#x27;.<br/>* Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.<br/>* Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!<br/><br/><br/>**Fine del Gioco**<br/><br/>Se pensi di aver raggiunto l&#x27;obiettivo di allineare tutti gli oggetti, puoi chiedere all&#x27;altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l&#x27;altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.<br/><br/>Both players win if the game ends within 28 rounds, where one round is defined as two players each sending a valid command.<br/><br/>**Punteggio:**<br/><br/>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?<br/><br/><br/>Per favore invia un messaggio all&#x27;altro giocatore per iniziare il gioco!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Ciao! Iniziamo questo gioco di coordinamento. Sul mio tavolo ho gli oggetti P, O, T, S, D, A, M posizionati in varie celle. Per vincere dobbiamo far sì che gli stessi oggetti finiscano nelle stesse coordinate su entrambi i nostri tavoli. Ti propongo di concordare una configurazione target. Ecco le posizioni attuali sul mio tavolo: P in (1,5), O in (1,3), T in (7,2), S in (6,1), D in (3,4), A in (4,4), M in (5,3). Che ne dici se proviamo a spostare tutto nella riga superiore da sinistra a destra nell&#x27;ordine alfabetico? Cioè: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1). Che ne pensi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ciao! Iniziamo questo gioco di coordinamento. Sul mio tavolo ho gli oggetti P, O, T, S, D, A, M posizionati in varie celle. Per vincere dobbiamo far sì che gli stessi oggetti finiscano nelle stesse coordinate su entrambi i nostri tavoli. Ti propongo di concordare una configurazione target. Ecco le posizioni attuali sul mio tavolo: P in (1,5), O in (1,3), T in (7,2), S in (6,1), D in (3,4), A in (4,4), M in (5,3). Che ne dici se proviamo a spostare tutto nella riga superiore da sinistra a destra nell&#x27;ordine alfabetico? Cioè: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1). Che ne pensi?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:<br/><br/>```<br/> 1234567<br/>╔═══════╗<br/>║◌◌A◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/><br/>```<br/><br/>* Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.<br/>* The following objects are randomly placed on your grid: &#x27;P&#x27;, &#x27;O&#x27;, &#x27;T&#x27;, &#x27;S&#x27;, &#x27;D&#x27;, &#x27;A&#x27;, &#x27;M&#x27;.<br/><br/><br/>L&#x27;altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell&#x27;altro giocatore, e loro non possono vedere il tuo.<br/><br/><br/>**Obiettivo:**<br/><br/>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l&#x27;altro giocatore per concordare una configurazione obiettivo comune.<br/><br/><br/>**Regole:**<br/><br/>* In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:<br/> 1. `COMUNICA: &lt;MESSAGE&gt;`: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all&#x27;altro giocatore. Lo inoltrerò al tuo partner.<br/>2. `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.<br/>* Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.<br/>* If both players accumulate more than 16 penalties, you both lose the game.<br/>* È vitale che comunichi con l&#x27;altro giocatore riguardo al tuo stato obiettivo! L&#x27;*unico* modo in cui puoi trasmettere la tua strategia all&#x27;altro giocatore è usando il comando `COMUNICA: &lt;MESSAGE&gt;`!<br/><br/><br/>**Spostamento Oggetti**<br/><br/>* Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo &#x27;◌&#x27;.<br/>* Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.<br/>* Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!<br/><br/><br/>**Fine del Gioco**<br/><br/>Se pensi di aver raggiunto l&#x27;obiettivo di allineare tutti gli oggetti, puoi chiedere all&#x27;altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l&#x27;altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.<br/><br/>Both players win if the game ends within 28 rounds, where one round is defined as two players each sending a valid command.<br/><br/>**Punteggio:**<br/><br/>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?<br/><br/>L&#x27;altro giocatore ha iniziato il gioco inviando questo messaggio:<br/><br/>&quot;Ciao! Iniziamo questo gioco di coordinamento. Sul mio tavolo ho gli oggetti P, O, T, S, D, A, M posizionati in varie celle. Per vincere dobbiamo far sì che gli stessi oggetti finiscano nelle stesse coordinate su entrambi i nostri tavoli. Ti propongo di concordare una configurazione target. Ecco le posizioni attuali sul mio tavolo: P in (1,5), O in (1,3), T in (7,2), S in (6,1), D in (3,4), A in (4,4), M in (5,3). Che ne dici se proviamo a spostare tutto nella riga superiore da sinistra a destra nell&#x27;ordine alfabetico? Cioè: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1). Che ne pensi?&quot;<br/><br/>Qual è il tuo primo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Analizzo la situazione. L&#x27;altro giocatore propone di mettere tutti gli oggetti nella riga 1 in ordine alfabetico. Vediamo le posizioni attuali sul mio tavolo:<br/><br/>- A in (3,1)<br/>- P in (3,2) <br/>- O in (5,2)<br/>- S in (1,3)<br/>- D in (4,6)<br/>- M in (4,7)<br/>- T in (1,7)<br/><br/>La proposta dell&#x27;altro giocatore è:<br/>- A in (1,1)<br/>- D in (2,1) <br/>- M in (3,1)<br/>- O in (4,1)<br/>- P in (5,1)<br/>- S in (6,1)<br/>- T in (7,1)<br/><br/>Questa sembra una buona strategia - mettere tutto in ordine alfabetico nella prima riga. Comunico il mio accordo e le mie posizioni attuali.<br/><br/>COMUNICA: Perfetto! Sono d&#x27;accordo con la tua proposta di mettere tutti gli oggetti nella riga 1 in ordine alfabetico. Ecco le posizioni attuali sul mio tavolo: A in (3,1</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Analizzo la situazione. L&#x27;altro giocatore propone di mettere tutti gli oggetti nella riga 1 in ordine alfabetico. Vediamo le posizioni attuali sul mio tavolo:<br/><br/>- A in (3,1)<br/>- P in (3,2) <br/>- O in (5,2)<br/>- S in (1,3)<br/>- D in (4,6)<br/>- M in (4,7)<br/>- T in (1,7)<br/><br/>La proposta dell&#x27;altro giocatore è:<br/>- A in (1,1)<br/>- D in (2,1) <br/>- M in (3,1)<br/>- O in (4,1)<br/>- P in (5,1)<br/>- S in (6,1)<br/>- T in (7,1)<br/><br/>Questa sembra una buona strategia - mettere tutto in ordine alfabetico nella prima riga. Comunico il mio accordo e le mie posizioni attuali.<br/><br/>COMUNICA: Perfetto! Sono d&#x27;accordo con la tua proposta di mettere tutti gli oggetti nella riga 1 in ordine alfabetico. Ecco le posizioni attuali sul mio tavolo: A in (3,1</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Analizzo la situazione. L&#x27;altro giocatore propone di mettere tutti gli oggetti nella riga 1 in ordine alfabetico. Vediamo le posizioni attuali sul mio tavolo:<br/><br/>- A in (3,1)<br/>- P in (3,2) <br/>- O in (5,2)<br/>- S in (1,3)<br/>- D in (4,6)<br/>- M in (4,7)<br/>- T in (1,7)<br/><br/>La proposta dell&#x27;altro giocatore è:<br/>- A in (1,1)<br/>- D in (2,1) <br/>- M in (3,1)<br/>- O in (4,1)<br/>- P in (5,1)<br/>- S in (6,1)<br/>- T in (7,1)<br/><br/>Questa sembra una buona strategia - mettere tutto in ordine alfabetico nella prima riga. Comunico il mio accordo e le mie posizioni attuali.<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 1 of 16 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Perfetto! Sono d&#x27;accordo con la tua proposta di mettere tutti gli oggetti nella riga 1 in ordine alfabetico. Ecco le posizioni attuali sul mio tavolo: A in (3,1), P in (3,2), O in (5,2), S in (1,3), D in (4,6), M in (4,7), T in (1,7). Iniziamo a spostare verso la configurazione target: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! Sono d&#x27;accordo con la tua proposta di mettere tutti gli oggetti nella riga 1 in ordine alfabetico. Ecco le posizioni attuali sul mio tavolo: A in (3,1), P in (3,2), O in (5,2), S in (1,3), D in (4,6), M in (4,7), T in (1,7). Iniziamo a spostare verso la configurazione target: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1).</p>
+    </div>
+</div><div class="game-round" data-round="1">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 1 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! Sono d&#x27;accordo con la tua proposta di mettere tutti gli oggetti nella riga 1 in ordine alfabetico. Ecco le posizioni attuali sul mio tavolo: A in (3,1), P in (3,2), O in (5,2), S in (1,3), D in (4,6), M in (4,7), T in (1,7). Iniziamo a spostare verso la configurazione target: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: A, (1, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: A, (1, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;A&#x27; in (1,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║A◌◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌M┌─╢ 3<br/>╟──┐D◌│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 2 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: A, (1, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: A, (1, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;A&#x27; in (1,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║A◌◌◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="2">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;A&#x27; in (1,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║A◌◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌M┌─╢ 3<br/>╟──┐D◌│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 2 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: D, (2, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: D, (2, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;D&#x27; in (2,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║AD◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌M┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;A&#x27; in (1,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║A◌◌◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│D◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 3 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: D, (2, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: D, (2, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;D&#x27; in (2,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║AD◌◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="3">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;D&#x27; in (2,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║AD◌◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌M┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 3 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: M, (3, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: M, (3, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;M&#x27; in (3,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADM◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;D&#x27; in (2,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║AD◌◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│M◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 4 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: M, (3, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: M, (3, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;M&#x27; in (3,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADM◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="4">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;M&#x27; in (3,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADM◌◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║O◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 4 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: O, (4, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: O, (4, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;O&#x27; in (4,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMO◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;M&#x27; in (3,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADM◌◌◌◌║ 1<br/>║◌◌P◌O◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 5 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: O, (4, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: O, (4, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;O&#x27; in (4,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMO◌◌◌║ 1<br/>║◌◌P◌◌◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="5">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;O&#x27; in (4,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMO◌S◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║P◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 5 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: P, (5, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: P, (5, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;P&#x27; in (5,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOPS◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;O&#x27; in (4,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMO◌◌◌║ 1<br/>║◌◌P◌◌◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 6 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: P, (5, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: P, (5, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;P&#x27; in (5,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOP◌◌║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="6">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;P&#x27; in (5,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOPS◌║ 1<br/>║◌◌◌◌◌◌T║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 6 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: T, (7, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: T, (7, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;T&#x27; in (7,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOPST║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;P&#x27; in (5,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOP◌◌║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║S◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 7 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: S, (6, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: S, (6, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;S&#x27; in (6,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOPS◌║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="7">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;T&#x27; in (7,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOPST║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 7 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Perfetto! Ho completato la configurazione target sul mio tavolo: tutti gli oggetti sono ora nella riga 1 in ordine alfabetico (A-D-M-O-P-S-T). Come stai procedendo tu? Hai bisogno di altri spostamenti per raggiungere la stessa configurazione?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! Ho completato la configurazione target sul mio tavolo: tutti gli oggetti sono ora nella riga 1 in ordine alfabetico (A-D-M-O-P-S-T). Come stai procedendo tu? Hai bisogno di altri spostamenti per raggiungere la stessa configurazione?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;S&#x27; in (6,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOPS◌║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║T◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 8 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! Ho completato la configurazione target sul mio tavolo: tutti gli oggetti sono ora nella riga 1 in ordine alfabetico (A-D-M-O-P-S-T). Come stai procedendo tu? Hai bisogno di altri spostamenti per raggiungere la stessa configurazione?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: T, (7, 1)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: T, (7, 1)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;T&#x27; in (7,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOPST║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="8">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 8 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Ho notato che hai fatto un altro spostamento. Fammi sapere quando hai finito di posizionare tutti i tuoi oggetti nella configurazione target (A-D-M-O-P-S-T nella riga 1). Dal mio lato sono già tutti a posto!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ho notato che hai fatto un altro spostamento. Fammi sapere quando hai finito di posizionare tutti i tuoi oggetti nella configurazione target (A-D-M-O-P-S-T nella riga 1). Dal mio lato sono già tutti a posto!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;T&#x27; in (7,1) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══════╗<br/>║ADMOPST║ 1<br/>║◌◌◌◌◌◌◌║ 2<br/>║◌◌◌◌◌┌─╢ 3<br/>╟──┐◌◌│◌║ 4<br/>║◌◌├──┼─╢ 5<br/>║◌◌│◌◌│◌║ 6<br/>║◌◌│◌◌│◌║ 7<br/>╚══╧══╧═╝<br/>```<br/>You are currently playing round 9 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Ho notato che hai fatto un altro spostamento. Fammi sapere quando hai finito di posizionare tutti i tuoi oggetti nella configurazione target (A-D-M-O-P-S-T nella riga 1). Dal mio lato sono già tutti a posto!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Perfetto! Ho appena completato anche io la configurazione target. Tutti i miei oggetti sono ora posizionati nella riga 1 in ordine alfabetico: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1). Siamo pronti a finire il gioco. Finito?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! Ho appena completato anche io la configurazione target. Tutti i miei oggetti sono ora posizionati nella riga 1 in ordine alfabetico: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1). Siamo pronti a finire il gioco. Finito?</p>
+    </div>
+</div><div class="game-round" data-round="9">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 9 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! Ho appena completato anche io la configurazione target. Tutti i miei oggetti sono ora posizionati nella riga 1 in ordine alfabetico: A in (1,1), D in (2,1), M in (3,1), O in (4,1), P in (5,1), S in (6,1), T in (7,1). Siamo pronti a finire il gioco. Finito?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 10 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+</div><div class="game-round" data-round="10">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 10 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Perfetto! Abbiamo entrambi confermato che il gioco è finito. Tutti gli oggetti dovrebbero ora essere allineati nelle stesse posizioni su entrambi i nostri tavoli nella riga 1 in ordine alfabetico. Grande lavoro di squadra!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! Abbiamo entrambi confermato che il gioco è finito. Tutti gli oggetti dovrebbero ora essere allineati nelle stesse posizioni su entrambi i nostri tavoli nella riga 1 in ordine alfabetico. Grande lavoro di squadra!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 11 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! Abbiamo entrambi confermato che il gioco è finito. Tutti gli oggetti dovrebbero ora essere allineati nelle stesse posizioni su entrambi i nostri tavoli nella riga 1 in ordine alfabetico. Grande lavoro di squadra!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Ottimo lavoro di squadra! Abbiamo completato con successo l&#x27;obiettivo in soli 11 round su 28 disponibili, con una sola penalità accumulata. La strategia di ordinare alfabeticamente nella prima riga si è rivelata molto efficace. Congratulazioni per la vittoria!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ottimo lavoro di squadra! Abbiamo completato con successo l&#x27;obiettivo in soli 11 round su 28 disponibili, con una sola penalità accumulata. La strategia di ordinare alfabeticamente nella prima riga si è rivelata molto efficace. Congratulazioni per la vittoria!</p>
+    </div>
+</div><div class="game-round" data-round="11">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 11 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Ottimo lavoro di squadra! Abbiamo completato con successo l&#x27;obiettivo in soli 11 round su 28 disponibili, con una sola penalità accumulata. La strategia di ordinare alfabeticamente nella prima riga si è rivelata molto efficace. Congratulazioni per la vittoria!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Grazie! Sono molto soddisfatto di come abbiamo gestito questa sfida. La comunicazione chiara fin dall&#x27;inizio e la scelta di una strategia semplice ma efficace (ordine alfabetico nella prima riga) ci hanno permesso di completare il gioco rapidamente e con successo. È stato un piacere collaborare con te!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Grazie! Sono molto soddisfatto di come abbiamo gestito questa sfida. La comunicazione chiara fin dall&#x27;inizio e la scelta di una strategia semplice ma efficace (ordine alfabetico nella prima riga) ci hanno permesso di completare il gioco rapidamente e con successo. È stato un piacere collaborare con te!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 12 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Grazie! Sono molto soddisfatto di come abbiamo gestito questa sfida. La comunicazione chiara fin dall&#x27;inizio e la scelta di una strategia semplice ma efficace (ordine alfabetico nella prima riga) ci hanno permesso di completare il gioco rapidamente e con successo. È stato un piacere collaborare con te!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: È stato un piacere anche per me! La chiave del successo è stata davvero la comunicazione efficace e la scelta di una strategia chiara e condivisa fin dall&#x27;inizio. Abbiamo dimostrato che con buona coordinazione si possono ottenere ottimi risultati. Complimenti ancora per l&#x27;ottima partita!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: È stato un piacere anche per me! La chiave del successo è stata davvero la comunicazione efficace e la scelta di una strategia chiara e condivisa fin dall&#x27;inizio. Abbiamo dimostrato che con buona coordinazione si possono ottenere ottimi risultati. Complimenti ancora per l&#x27;ottima partita!</p>
+    </div>
+</div><div class="game-round" data-round="12">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 12 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;È stato un piacere anche per me! La chiave del successo è stata davvero la comunicazione efficace e la scelta di una strategia chiara e condivisa fin dall&#x27;inizio. Abbiamo dimostrato che con buona coordinazione si possono ottenere ottimi risultati. Complimenti ancora per l&#x27;ottima partita!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Concordo completamente! Questa partita è stata un ottimo esempio di come la collaborazione e la pianificazione strategica possano portare al successo. Spero di poter giocare di nuovo insieme in futuro. Ancora complimenti per il lavoro di squadra eccellente!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Concordo completamente! Questa partita è stata un ottimo esempio di come la collaborazione e la pianificazione strategica possano portare al successo. Spero di poter giocare di nuovo insieme in futuro. Ancora complimenti per il lavoro di squadra eccellente!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 13 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Concordo completamente! Questa partita è stata un ottimo esempio di come la collaborazione e la pianificazione strategica possano portare al successo. Spero di poter giocare di nuovo insieme in futuro. Ancora complimenti per il lavoro di squadra eccellente!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Assolutamente! Anche io spero di avere altre occasioni per collaborare insieme. Questa esperienza ha dimostrato quanto sia importante stabilire subito un piano chiaro e comunicare in modo efficiente. Grazie per essere stato un partner così collaborativo e strategico. Alla prossima sfida!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Assolutamente! Anche io spero di avere altre occasioni per collaborare insieme. Questa esperienza ha dimostrato quanto sia importante stabilire subito un piano chiaro e comunicare in modo efficiente. Grazie per essere stato un partner così collaborativo e strategico. Alla prossima sfida!</p>
+    </div>
+</div><div class="game-round" data-round="13">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 13 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Assolutamente! Anche io spero di avere altre occasioni per collaborare insieme. Questa esperienza ha dimostrato quanto sia importante stabilire subito un piano chiaro e comunicare in modo efficiente. Grazie per essere stato un partner così collaborativo e strategico. Alla prossima sfida!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Perfetto! È stato davvero gratificante lavorare con un partner così organizzato e comunicativo come te. Abbiamo dimostrato che con la giusta strategia e collaborazione si possono raggiungere grandi risultati in poco tempo. Grazie per questa bella esperienza di gioco e buona fortuna per le prossime sfide!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! È stato davvero gratificante lavorare con un partner così organizzato e comunicativo come te. Abbiamo dimostrato che con la giusta strategia e collaborazione si possono raggiungere grandi risultati in poco tempo. Grazie per questa bella esperienza di gioco e buona fortuna per le prossime sfide!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 14 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! È stato davvero gratificante lavorare con un partner così organizzato e comunicativo come te. Abbiamo dimostrato che con la giusta strategia e collaborazione si possono raggiungere grandi risultati in poco tempo. Grazie per questa bella esperienza di gioco e buona fortuna per le prossime sfide!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Grazie mille! Anche per me è stata un&#x27;esperienza molto positiva. Il nostro approccio metodico e la comunicazione aperta hanno reso tutto molto fluido. Ti auguro il meglio per tutte le tue future avventure di gioco. È stato un vero piacere giocare con te!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Grazie mille! Anche per me è stata un&#x27;esperienza molto positiva. Il nostro approccio metodico e la comunicazione aperta hanno reso tutto molto fluido. Ti auguro il meglio per tutte le tue future avventure di gioco. È stato un vero piacere giocare con te!</p>
+    </div>
+</div><div class="game-round" data-round="14">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 14 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Grazie mille! Anche per me è stata un&#x27;esperienza molto positiva. Il nostro approccio metodico e la comunicazione aperta hanno reso tutto molto fluido. Ti auguro il meglio per tutte le tue future avventure di gioco. È stato un vero piacere giocare con te!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Il piacere è stato tutto mio! Questa partita rimarrà un ottimo esempio di come si possa vincere attraverso il lavoro di squadra efficace. Ti ringrazio per la bella esperienza e ti auguro il meglio. Arrivederci e in bocca al lupo per tutto!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Il piacere è stato tutto mio! Questa partita rimarrà un ottimo esempio di come si possa vincere attraverso il lavoro di squadra efficace. Ti ringrazio per la bella esperienza e ti auguro il meglio. Arrivederci e in bocca al lupo per tutto!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 15 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Il piacere è stato tutto mio! Questa partita rimarrà un ottimo esempio di come si possa vincere attraverso il lavoro di squadra efficace. Ti ringrazio per la bella esperienza e ti auguro il meglio. Arrivederci e in bocca al lupo per tutto!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Arrivederci e grazie di cuore! Questa partita è stata davvero esemplare e mi ha fatto molto piacere collaborare con te. In bocca al lupo anche a te per tutto quello che farai. A presto!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Arrivederci e grazie di cuore! Questa partita è stata davvero esemplare e mi ha fatto molto piacere collaborare con te. In bocca al lupo anche a te per tutto quello che farai. A presto!</p>
+    </div>
+</div><div class="game-round" data-round="15">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 15 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Arrivederci e grazie di cuore! Questa partita è stata davvero esemplare e mi ha fatto molto piacere collaborare con te. In bocca al lupo anche a te per tutto quello che farai. A presto!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Grazie di tutto! È stato fantastico e spero davvero di rivederci presto per altre sfide. Continua così e buona fortuna! Arrivederci!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Grazie di tutto! È stato fantastico e spero davvero di rivederci presto per altre sfide. Continua così e buona fortuna! Arrivederci!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 16 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Grazie di tutto! È stato fantastico e spero davvero di rivederci presto per altre sfide. Continua così e buona fortuna! Arrivederci!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Grazie ancora! È stato davvero un grande piacere. Spero anch&#x27;io di giocare nuovamente insieme presto. Buona fortuna per tutto e arrivederci!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Grazie ancora! È stato davvero un grande piacere. Spero anch&#x27;io di giocare nuovamente insieme presto. Buona fortuna per tutto e arrivederci!</p>
+    </div>
+</div><div class="game-round" data-round="16">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 16 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Grazie ancora! È stato davvero un grande piacere. Spero anch&#x27;io di giocare nuovamente insieme presto. Buona fortuna per tutto e arrivederci!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Arrivederci e ancora congratulazioni per la vittoria! A presto!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Arrivederci e ancora congratulazioni per la vittoria! A presto!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 17 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Arrivederci e ancora congratulazioni per la vittoria! A presto!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Congratulazioni anche a te! È stata una vittoria di squadra. A presto e arrivederci!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Congratulazioni anche a te! È stata una vittoria di squadra. A presto e arrivederci!</p>
+    </div>
+</div><div class="game-round" data-round="17">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 17 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Congratulazioni anche a te! È stata una vittoria di squadra. A presto e arrivederci!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Perfetto! Ciao e a presto!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! Ciao e a presto!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 18 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! Ciao e a presto!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Ciao e a presto!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ciao e a presto!</p>
+    </div>
+</div><div class="game-round" data-round="18">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 18 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Ciao e a presto!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Ciao!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ciao!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 19 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Ciao!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Ciao!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ciao!</p>
+    </div>
+</div><div class="game-round" data-round="19">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 19 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Ciao!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: 👋</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: 👋</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 20 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;👋&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: 👋</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: 👋</p>
+    </div>
+</div><div class="game-round" data-round="20">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 20 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;👋&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Bene, credo che abbiamo già raggiunto il nostro obiettivo e ci siamo salutati abbastanza! Il gioco è tecnicamente finito dal momento che abbiamo allineato tutti gli oggetti. Possiamo lasciare che il tempo scada naturalmente dato che abbiamo vinto.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Bene, credo che abbiamo già raggiunto il nostro obiettivo e ci siamo salutati abbastanza! Il gioco è tecnicamente finito dal momento che abbiamo allineato tutti gli oggetti. Possiamo lasciare che il tempo scada naturalmente dato che abbiamo vinto.</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 21 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Bene, credo che abbiamo già raggiunto il nostro obiettivo e ci siamo salutati abbastanza! Il gioco è tecnicamente finito dal momento che abbiamo allineato tutti gli oggetti. Possiamo lasciare che il tempo scada naturalmente dato che abbiamo vinto.&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Hai ragione! Abbiamo completato l&#x27;obiettivo con successo e ci siamo già salutati. Il gioco è stato vinto quando abbiamo allineato tutti gli oggetti. Possiamo tranquillamente aspettare che il tempo scada. Ottimo lavoro!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Hai ragione! Abbiamo completato l&#x27;obiettivo con successo e ci siamo già salutati. Il gioco è stato vinto quando abbiamo allineato tutti gli oggetti. Possiamo tranquillamente aspettare che il tempo scada. Ottimo lavoro!</p>
+    </div>
+</div><div class="game-round" data-round="21">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 21 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Hai ragione! Abbiamo completato l&#x27;obiettivo con successo e ci siamo già salutati. Il gioco è stato vinto quando abbiamo allineato tutti gli oggetti. Possiamo tranquillamente aspettare che il tempo scada. Ottimo lavoro!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Esatto! Abbiamo completato la missione con successo in tempi record. Ora possiamo rilassarci sapendo di aver fatto un ottimo lavoro di squadra. Grazie ancora per la splendida collaborazione!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Esatto! Abbiamo completato la missione con successo in tempi record. Ora possiamo rilassarci sapendo di aver fatto un ottimo lavoro di squadra. Grazie ancora per la splendida collaborazione!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 22 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Esatto! Abbiamo completato la missione con successo in tempi record. Ora possiamo rilassarci sapendo di aver fatto un ottimo lavoro di squadra. Grazie ancora per la splendida collaborazione!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Perfetto! È stata davvero una collaborazione esemplare. Possiamo essere orgogliosi del risultato ottenuto. Grazie ancora a te per l&#x27;ottimo lavoro di squadra!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! È stata davvero una collaborazione esemplare. Possiamo essere orgogliosi del risultato ottenuto. Grazie ancora a te per l&#x27;ottimo lavoro di squadra!</p>
+    </div>
+</div><div class="game-round" data-round="22">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 22 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! È stata davvero una collaborazione esemplare. Possiamo essere orgogliosi del risultato ottenuto. Grazie ancora a te per l&#x27;ottimo lavoro di squadra!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Assolutamente! Missione compiuta con grande successo. È stato un piacere lavorare insieme verso un obiettivo comune e raggiungerlo così efficacemente. Complimenti a entrambi!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Assolutamente! Missione compiuta con grande successo. È stato un piacere lavorare insieme verso un obiettivo comune e raggiungerlo così efficacemente. Complimenti a entrambi!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 23 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Assolutamente! Missione compiuta con grande successo. È stato un piacere lavorare insieme verso un obiettivo comune e raggiungerlo così efficacemente. Complimenti a entrambi!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Complimenti anche a te! È stata una dimostrazione perfetta di come la cooperazione e la comunicazione chiara possano portare al successo. Missione davvero ben compiuta!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Complimenti anche a te! È stata una dimostrazione perfetta di come la cooperazione e la comunicazione chiara possano portare al successo. Missione davvero ben compiuta!</p>
+    </div>
+</div><div class="game-round" data-round="23">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 23 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Complimenti anche a te! È stata una dimostrazione perfetta di come la cooperazione e la comunicazione chiara possano portare al successo. Missione davvero ben compiuta!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Concordo pienamente! Questa esperienza è stata un perfetto esempio di teamwork efficace. Abbiamo dimostrato che con organizzazione e comunicazione si possono raggiungere grandi risultati in poco tempo!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Concordo pienamente! Questa esperienza è stata un perfetto esempio di teamwork efficace. Abbiamo dimostrato che con organizzazione e comunicazione si possono raggiungere grandi risultati in poco tempo!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 24 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Concordo pienamente! Questa esperienza è stata un perfetto esempio di teamwork efficace. Abbiamo dimostrato che con organizzazione e comunicazione si possono raggiungere grandi risultati in poco tempo!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Esatto! Abbiamo creato un ottimo esempio di come affrontare sfide collaborative. La nostra strategia e coordinazione sono state davvero impeccabili!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Esatto! Abbiamo creato un ottimo esempio di come affrontare sfide collaborative. La nostra strategia e coordinazione sono state davvero impeccabili!</p>
+    </div>
+</div><div class="game-round" data-round="24">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 24 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Esatto! Abbiamo creato un ottimo esempio di come affrontare sfide collaborative. La nostra strategia e coordinazione sono state davvero impeccabili!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Perfettamente d&#x27;accordo! La nostra strategia di comunicazione immediata e pianificazione condivisa si è rivelata vincente. Un vero modello di collaborazione efficace!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfettamente d&#x27;accordo! La nostra strategia di comunicazione immediata e pianificazione condivisa si è rivelata vincente. Un vero modello di collaborazione efficace!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 25 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfettamente d&#x27;accordo! La nostra strategia di comunicazione immediata e pianificazione condivisa si è rivelata vincente. Un vero modello di collaborazione efficace!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Assolutamente! Abbiamo stabilito subito un piano chiaro e l&#x27;abbiamo eseguito alla perfezione. Un esempio perfetto di come dovrebbe funzionare la collaborazione!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Assolutamente! Abbiamo stabilito subito un piano chiaro e l&#x27;abbiamo eseguito alla perfezione. Un esempio perfetto di come dovrebbe funzionare la collaborazione!</p>
+    </div>
+</div><div class="game-round" data-round="25">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 25 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Assolutamente! Abbiamo stabilito subito un piano chiaro e l&#x27;abbiamo eseguito alla perfezione. Un esempio perfetto di come dovrebbe funzionare la collaborazione!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Esattamente! Piano chiaro, esecuzione precisa e comunicazione costante: la ricetta perfetta per il successo. Siamo stati davvero un team eccezionale!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Esattamente! Piano chiaro, esecuzione precisa e comunicazione costante: la ricetta perfetta per il successo. Siamo stati davvero un team eccezionale!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 26 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Esattamente! Piano chiaro, esecuzione precisa e comunicazione costante: la ricetta perfetta per il successo. Siamo stati davvero un team eccezionale!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Proprio così! Abbiamo dimostrato che con la giusta combinazione di strategia, comunicazione e coordinazione si possono ottenere risultati eccellenti. Team davvero fantastico!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Proprio così! Abbiamo dimostrato che con la giusta combinazione di strategia, comunicazione e coordinazione si possono ottenere risultati eccellenti. Team davvero fantastico!</p>
+    </div>
+</div><div class="game-round" data-round="26">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 26 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Proprio così! Abbiamo dimostrato che con la giusta combinazione di strategia, comunicazione e coordinazione si possono ottenere risultati eccellenti. Team davvero fantastico!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Perfetto! Siamo stati un team straordinario. Con solo 2 round rimasti, possiamo essere orgogliosi di aver completato la missione con tale successo e professionalità!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! Siamo stati un team straordinario. Con solo 2 round rimasti, possiamo essere orgogliosi di aver completato la missione con tale successo e professionalità!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 27 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! Siamo stati un team straordinario. Con solo 2 round rimasti, possiamo essere orgogliosi di aver completato la missione con tale successo e professionalità!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Assolutamente! Siamo arrivati quasi alla fine con una performance eccezionale. Possiamo essere davvero orgogliosi di questo successo ottenuto con grande professionalità e spirito di squadra!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Assolutamente! Siamo arrivati quasi alla fine con una performance eccezionale. Possiamo essere davvero orgogliosi di questo successo ottenuto con grande professionalità e spirito di squadra!</p>
+    </div>
+</div><div class="game-round" data-round="27">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 27 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Assolutamente! Siamo arrivati quasi alla fine con una performance eccezionale. Possiamo essere davvero orgogliosi di questo successo ottenuto con grande professionalità e spirito di squadra!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Ultimo round! È stato un onore collaborare con te in questa sfida. Abbiamo raggiunto la vittoria con stile, efficienza e grande spirito di squadra. Missione compiuta alla perfezione!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ultimo round! È stato un onore collaborare con te in questa sfida. Abbiamo raggiunto la vittoria con stile, efficienza e grande spirito di squadra. Missione compiuta alla perfezione!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 28 of maximum 28.<br/>You have collectively accumulated 1 of 16 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Ultimo round! È stato un onore collaborare con te in questa sfida. Abbiamo raggiunto la vittoria con stile, efficienza e grande spirito di squadra. Missione compiuta alla perfezione!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Ultimo round infatti! È stato un vero onore anche per me. Abbiamo concluso questa sfida in modo impeccabile, dimostrando che il vero successo nasce dalla collaborazione. Missione compiuta alla grande!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ultimo round infatti! È stato un vero onore anche per me. Abbiamo concluso questa sfida in modo impeccabile, dimostrando che il vero successo nasce dalla collaborazione. Missione compiuta alla grande!</p>
+    </div>
+
+    <div speaker="Game Master: end" class="msg gm-gm" style="">
+        <p>Maximum number of rounds reached</p>
+    </div>
+
+    <div speaker="Game Master: game_finished" class="msg gm-gm" style="">
+        <p>* success: True<br/>* lose: False<br/>* aborted: False<br/>-------<br/>* Shifts: 7.00<br/>* Max Shifts: 12.00<br/>* Min Shifts: 6.00<br/>* End Distance Sum: 0.00<br/>* Init Distance Sum: 30.65<br/>* Expected Distance Sum: 29.33<br/>* Penalties: 1.00<br/>* Max Penalties: 16.00<br/>* Rounds: 28.00<br/>* Max Rounds: 28.00<br/>* Object Count: 7.00<br/></p>
+    </div>
+
+    <div speaker="Game Master: dev:game_finished" class="msg gm-gm" style="">
+        <p>* Main Score: 96.69<br/><br/>-------<br/>* Distance Score: 1.00<br/>* Consistency Score: 0.86<br/>* Coverage Score: 0.88<br/>* Penalty Score: 1.07<br/>* Alternative Penalty Score: 1.03<br/>* Alternative Main Score: 103.23<br/><br/>-------<br/>* Shifts: 7.00<br/>* Max Shifts: 12.00<br/>* Min Shifts: 6.00<br/>* End Distance Sum: 0.00<br/>* Init Distance Sum: 30.65<br/>* Expected Distance Sum: 29.33<br/>* Penalties: 1.00<br/>* Max Penalties: 16.00<br/>* Rounds: 28.00<br/>* Max Rounds: 28.00<br/>* Object Count: 7.00<br/></p>
+    </div>
+</div>
+</div>
+
+</body>
+</html>

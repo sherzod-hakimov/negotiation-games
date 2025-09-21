@@ -1,0 +1,767 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+    <style>
+        /* This CSS is an adaptation from the answer by Roko C. Buljan in https://stackoverflow.com/a/71155446 */ 
+
+* {margin: 0; box-sizing: border-box;}
+
+body {background-color: rgb(157, 152, 150);}
+
+  /* dialogue header */
+
+.top-info {
+  text-align: center;
+  --rad: 20px;
+  --rad-sm: 3px;
+  font: 20px/1.5 sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  max-width: 900px;
+  margin: auto;
+  background: #3f3e3e;
+  color: #fff;
+}
+
+.chat {
+    --rad: 20px;
+    --rad-sm: 3px;
+    font: 16px/1.5 sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    max-width: 900px;
+    margin: auto;
+    background: #fff;
+  }
+  
+  .msg {
+    position: relative;
+    max-width: 75%;
+    padding: 7px 15px;
+    margin-bottom: 30px;
+  }
+  
+  /* 5 levels, two players to/from game master and meta messages form game master */
+
+  .msg.b-gm {
+    border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+    background: #874aaf;
+    color: #fff;
+    margin-left: 60%;
+  }
+
+  .msg.a-gm {
+    border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+    background: #f39109;
+    color: #fff;
+    margin-right: 60%;
+  }
+  
+  .msg.gm-a {
+    border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+    background: #c4c3c3;    
+    color: #0c0c0c;
+    margin-right: 40%;
+    margin-left: 20%;
+  }
+
+  .msg.gm-b {
+    border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+    background: #c4c3c3;
+    color: #0c0c0c;
+    margin-right: 20%;
+    margin-left: 40%;
+  }
+
+  .msg.gm-gm {
+    background: #f1f1f1;
+    color: #373636;
+    margin-left: 40%;
+    margin-right: 40%;
+    font-size: 0.8rem;
+
+  }
+  
+  /* speaker labels */
+  
+  .msg::before {
+    content: attr(speaker);
+    font-size: 0.8rem;
+    position: absolute;
+    bottom: 100%;
+    color: #888;
+    white-space: nowrap;
+
+  }
+  
+  .msg.b-gm::before {
+    right: 15px;
+  }
+
+  .msg.gm-a::before {
+    right: 15px;
+  }
+
+  .msg.a-gm::before {
+    left: 15px;
+  }
+
+  .msg.gm-b::before {
+    left: 15px;
+  }
+
+  .msg.gm-gm::before {
+    left: 0px;
+  }
+
+.game-round {
+  padding: 20px 0 20px 0;
+  background-color: #f0f8ff; /* light background for content */
+  position: relative; /* Important to position the badge */
+  border-radius: 10px;
+  margin: 10px 0 10px 0;
+  max-width: 800px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Badge in top-right corner */
+.game-round::before {
+  content: "Round " attr(data-round);
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #c4c3c3;
+  padding: 0px 2px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+    </style>
+</head>
+<body>
+
+<br/>
+
+<div class="top-info">
+    <p>Interaction Transcript for 2_hard_5obj_en, episode 1 with deepseek-chat-v3.1-t1.0.</p>
+</div>
+
+<br/>
+
+<div class="chat">
+<div class="game-round" data-round="0">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:<br/><br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║CH◌│W│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║T◌◌└┬┴─╢ 6<br/>║◌◌◌◌│◌I║ 7<br/>╚════╧══╝<br/><br/>```<br/><br/>* Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.<br/>* The following objects are randomly placed on your grid: &#x27;W&#x27;, &#x27;I&#x27;, &#x27;T&#x27;, &#x27;C&#x27;, &#x27;H&#x27;.<br/><br/><br/>L&#x27;altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell&#x27;altro giocatore, e loro non possono vedere il tuo.<br/><br/><br/>**Obiettivo:**<br/><br/>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l&#x27;altro giocatore per concordare una configurazione obiettivo comune.<br/><br/><br/>**Regole:**<br/><br/>* In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:<br/> 1. `COMUNICA: &lt;MESSAGE&gt;`: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all&#x27;altro giocatore. Lo inoltrerò al tuo partner.<br/>2. `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.<br/>* Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.<br/>* If both players accumulate more than 12 penalties, you both lose the game.<br/>* È vitale che comunichi con l&#x27;altro giocatore riguardo al tuo stato obiettivo! L&#x27;*unico* modo in cui puoi trasmettere la tua strategia all&#x27;altro giocatore è usando il comando `COMUNICA: &lt;MESSAGE&gt;`!<br/><br/><br/>**Spostamento Oggetti**<br/><br/>* Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo &#x27;◌&#x27;.<br/>* Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.<br/>* Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!<br/><br/><br/>**Fine del Gioco**<br/><br/>Se pensi di aver raggiunto l&#x27;obiettivo di allineare tutti gli oggetti, puoi chiedere all&#x27;altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l&#x27;altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.<br/><br/>Both players win if the game ends within 20 rounds, where one round is defined as two players each sending a valid command.<br/><br/>**Punteggio:**<br/><br/>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?<br/><br/><br/>Per favore invia un messaggio all&#x27;altro giocatore per iniziare il gioco!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Ciao! Iniziamo a giocare. Condivido la mia griglia per coordinare gli obiettivi. Sulla mia griglia, gli oggetti sono così: H a (1,1), W a (2,1), T a (1,6), I a (6,7). C è a (1,1) con H? No, CH è un oggetto? Aspetta, rileggo: &quot;CH&quot; è un oggetto o due? Nella griglia vedo &quot;CH◌&quot; nella prima cella (1,1), quindi probabilmente &quot;CH&quot; è un singolo oggetto. Quindi oggetti: CH a (1,1), W a (3,1), T a (1,6), I a (6,7). Ma (1,1) ha &quot;CH◌&quot;, quindi CH occupa (1,1) e (2,1)? No, guarda la griglia: la prima riga è &quot;║CH◌│W│◌║ 1&quot;, quindi x=1,y=1: &#x27;C&#x27;, x=2,y=1: &#x27;H&#x27;, x=3,y=1: &#x27;◌&#x27;, x=4,y=1: &#x27;W&#x27;, x=5,y=1: &#x27;│&#x27;, ma attenzione, le linee sono bordi. La griglia ha celle definite dai caratteri. Analizziamo meglio:<br/><br/>La griglia è disegnata con caratteri. Le coordinate sono numerate da 1 a 7 per x e y.<br/><br/>Riga 1: x=1: &#x27;C&#x27;, x=2: &#x27;H&#x27;, x=3: &#x27;◌&#x27;, x=4: &#x27;│&#x27;, ma no, la prima cella (1,1) contiene &quot;CH&quot; come oggetto? Questo è ambiguo. Leggendo la descrizione: &quot;Il bordo superiore mostra le coordinate x&quot;, e la griglia ha simboli.<br/><br/>In realtà, la griglia ha celle di dimensione fissa? Osservando:<br/><br/>La prima riga: &quot;║CH◌│W│◌║ 1&quot; - questo significa che ci sono tre celle nella riga 1? Perché i separatori verticali sono &quot;║&quot;, &quot;│&quot;, &quot;│&quot;, &quot;║&quot;. Quindi le colonne sono divise da questi.<br/><br/>In particolare, la griglia ha 7 colonne (x da 1 a 7) e 7 righe (y da 1 a 7).<br/><br/>Osserva i bordi: la prima riga ha &quot;╔═══╤═╤═╗&quot;, che indica che ci sono tre celle larghe? No, questo è il bordo superiore.<br/><br/>Per interpretare correttamente, dobbiamo considerare che ogni cella è uno spazio tra i caratteri di bordatura.<br/><br/>Standardizziamo: le coordinate (x,y) corrispondono a posizioni nella griglia dove possono essere oggetti o ◌.<br/><br/>Dalla riga 1: &quot;║CH◌│W│◌║&quot; - qui, dopo il primo &quot;║&quot;, c&#x27;è &quot;CH◌&quot;, che occupa x=1,y=1 e x=2,y=1? Ma probabilmente &quot;CH&quot; è un oggetto che occupa una singola cella? Questo è confuso.<br/><br/>Rileggo la descrizione: &quot;The following objects are randomly placed on your grid: &#x27;W&#x27;, &#x27;I&#x27;, &#x27;T&#x27;, &#x27;C&#x27;, &#x27;H&#x27;.&quot; Quindi ci sono 5 oggetti: W, I, T, C, H. Quindi &quot;CH&quot; non è un oggetto singolo, ma due oggetti: C e H.<br/><br/>Quindi sulla mia griglia:<br/>- C è a (1,1)<br/>- H è a (2,1)<br/>- W è a (4,1)  [perché dopo &quot;│&quot; c&#x27;è &quot;W&quot;, quindi x=4,y=1?]<br/><br/>Analizziamo la riga 1 in dettaglio:<br/><br/>La stringa è: &quot;║CH◌│W│◌║&quot;<br/><br/>I separatori verticali sono a x=0, x=3, x=4, x=5, x=7? Ma le coordinate x vanno da 1 a 7.<br/><br/>In realtà, i caratteri di bordatura non occupano coordinate; le coordinate sono per le celle.<br/><br/>La griglia ha 7 colonne, quindi ci sono 7 celle per riga.<br/><br/>La prima riga: inizia con &quot;║&quot;, poi la prima cella (x=1) contiene &quot;C&quot;?<br/>Ma &quot;CH◌&quot; è scritto senza spazio, quindi forse la prima cella ha &quot;C&quot;, la seconda &quot;H&quot;, la terza &quot;◌&quot;, poi &quot;│&quot; è un separatore tra x=3 e x=4, quindi x=4 ha &quot;W&quot;, poi &quot;│&quot; tra x=4 e x=5, x=5 ha &quot;◌&quot;, e poi &quot;║&quot;.<br/><br/>Quindi per y=1:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;◌&#x27;<br/>x=4: &#x27;W&#x27;<br/>x=5: &#x27;◌&#x27;<br/>x=6: ? non visibile, ma dalla lunghezza, dovrebbe essere vuoto? La stringa ha &quot;│◌║&quot;, quindi dopo x=5 c&#x27;è &quot;│&quot; che è per x=6? No.<br/><br/>Questo è complicato. Forse è meglio usare le coordinate indicate dai numeri.<br/><br/>Le coordinate sono etichettate: x da 1 a 7 in alto, y da 1 a 7 a destra.<br/><br/>Osserva la griglia:<br/><br/>La prima riga (y=1) ha caratteri alle x=1..7: <br/>x=1: &#x27;C&#x27; (da &quot;CH◌&quot;, primo carattere)<br/>x=2: &#x27;H&#x27; (secondo carattere)<br/>x=3: &#x27;◌&#x27; (terzo carattere)<br/>x=4: &#x27;│&#x27; (questo è un bordo, non una cella)<br/>x=5: &#x27;W&#x27; <br/>x=6: &#x27;│&#x27; (bordo)<br/>x=7: &#x27;◌&#x27; <br/><br/>Ma i bordi non sono celle, quindi le celle sono solo dove ci sono spazi per oggetti.<br/><br/>In realtà, la griglia è una matrice di celle, e i caratteri di disegno sono ai bordi.<br/><br/>Per y=1, le celle sono:<br/>cella (1,1): contiene &#x27;C&#x27;<br/>cella (2,1): contiene &#x27;H&#x27;<br/>cella (3,1): contiene &#x27;◌&#x27;<br/>cella (4,1): contiene &#x27;W&#x27;? Ma c&#x27;è un &quot;│&quot; tra, quindi forse la cella (4,1) è &quot;W&quot;, ma è adiacente al bordo.<br/><br/>Dalla rappresentazione, sembra che ci siano 5 celle nella prima riga? No, il bordo superiore &quot;╔═══╤═╤═╗&quot; suggerisce che ci sono 3 celle larghe: una larga 3, poi due larghe 1.<br/><br/>Questa griglia ha celle di dimensioni variabili.<br/><br/>Per evitare confusione, userò le coordinate come numerate.<br/><br/>Dai numeri, x da 1 a 7, y da 1 a 7.<br/><br/>Osserva la griglia e i simboli:<br/><br/>Per y=1: nella posizione, vediamo &quot;CH◌&quot; nelle prime tre x? Poi &quot;W&quot; a x=4, e &quot;◌&quot; a x=5? Ma x=6 e x=7 non sono visibili.<br/><br/>In realtà, la griglia è stampata con caratteri, e le coordinate corrispondono ai centri delle celle.<br/><br/>Per semplicità, elencherò gli oggetti con le coordinate basate sulla loro posizione nel testo.<br/><br/>Dalla griglia:<br/><br/>Riga 1: &quot;║CH◌│W│◌║&quot; - questo significa:<br/>- Alla riga 1, colonna 1: oggetto &#x27;C&#x27;<br/>- colonna 2: oggetto &#x27;H&#x27;<br/>- colonna 3: vuoto &#x27;◌&#x27;<br/>- colonna 4: oggetto &#x27;W&#x27; (dopo il primo &quot;│&quot;)<br/>- colonna 5: vuoto &#x27;◌&#x27; (dopo il secondo &quot;│&quot;)<br/> colonna 6 e 7 non appaiono, quindi probabilmente vuote o bordi.<br/><br/>Ma la griglia ha 7 colonne, quindi le colonne 6 e 7 devono essere presenti.<br/><br/>Guarda il bordo superiore: &quot;╔═══╤═╤═╗&quot; - questo copre x=1 a x=7? &quot;═══&quot; potrebbe essere per x=1,2,3, &quot;╤&quot; per x=4, &quot;═&quot; per x=5, &quot;╤&quot; per x=6, &quot;═&quot; per x=7? No.<br/><br/>Forse è meglio usare il fatto che gli oggetti sono in celle specifiche.<br/><br/>Dalla griglia, posso vedere:<br/><br/>- A (1,1): &#x27;C&#x27;<br/>- (2,1): &#x27;H&#x27;<br/>- (4,1): &#x27;W&#x27;  (perché dopo &quot;│&quot; c&#x27;è &quot;W&quot;)<br/>- (1,6): &#x27;T&#x27;  (dalla riga 6: &quot;║T◌◌└┬┴─╢&quot;)<br/>- (6,7): &#x27;I&#x27;  (riga 7: &quot;║◌◌◌◌│◌I║&quot;)<br/><br/>E anche &#x27;◌&#x27; in altre posizioni.<br/><br/>Quindi oggetti sulla mia griglia:<br/>C at (1,1)<br/>H at (2,1)<br/>W at (4,1)<br/>T at (1,6)<br/>I at (6,7)<br/><br/>Questo corrisponde a 5 oggetti.<br/><br/>Ora, per coordinare, dobbiamo metterli tutti in posizioni comuni.<br/><br/>Propongo di spostarli tutti nella riga inferiore o in una zona facile.<br/><br/>Per esempio, possiamo mettere tutti gli oggetti nella riga 7, da x=1 a x=5.<br/><br/>Ma (6,7) ha già I, quindi dobbiamo spostare I.<br/><br/>Quindi obiettivo: <br/>C at (1,7)<br/>H at (2,7)<br/>W at (3,7)<br/>T at (4,7)<br/>I at (5,7)<br/><br/>O qualcosa di simile.<br/><br/>Prima comunico all&#x27;altro giocatore la mia griglia iniziale.<br/><br/>COMUNICA: La mia griglia ha: C(1,1), H(2,1), W(4,1), T(1,6), I(6,7). Propongo di spostare tutti a riga 7: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Ciao! Iniziamo a giocare. Condivido la mia griglia per coordinare gli obiettivi. Sulla mia griglia, gli oggetti sono così: H a (1,1), W a (2,1), T a (1,6), I a (6,7). C è a (1,1) con H? No, CH è un oggetto? Aspetta, rileggo: &quot;CH&quot; è un oggetto o due? Nella griglia vedo &quot;CH◌&quot; nella prima cella (1,1), quindi probabilmente &quot;CH&quot; è un singolo oggetto. Quindi oggetti: CH a (1,1), W a (3,1), T a (1,6), I a (6,7). Ma (1,1) ha &quot;CH◌&quot;, quindi CH occupa (1,1) e (2,1)? No, guarda la griglia: la prima riga è &quot;║CH◌│W│◌║ 1&quot;, quindi x=1,y=1: &#x27;C&#x27;, x=2,y=1: &#x27;H&#x27;, x=3,y=1: &#x27;◌&#x27;, x=4,y=1: &#x27;W&#x27;, x=5,y=1: &#x27;│&#x27;, ma attenzione, le linee sono bordi. La griglia ha celle definite dai caratteri. Analizziamo meglio:<br/><br/>La griglia è disegnata con caratteri. Le coordinate sono numerate da 1 a 7 per x e y.<br/><br/>Riga 1: x=1: &#x27;C&#x27;, x=2: &#x27;H&#x27;, x=3: &#x27;◌&#x27;, x=4: &#x27;│&#x27;, ma no, la prima cella (1,1) contiene &quot;CH&quot; come oggetto? Questo è ambiguo. Leggendo la descrizione: &quot;Il bordo superiore mostra le coordinate x&quot;, e la griglia ha simboli.<br/><br/>In realtà, la griglia ha celle di dimensione fissa? Osservando:<br/><br/>La prima riga: &quot;║CH◌│W│◌║ 1&quot; - questo significa che ci sono tre celle nella riga 1? Perché i separatori verticali sono &quot;║&quot;, &quot;│&quot;, &quot;│&quot;, &quot;║&quot;. Quindi le colonne sono divise da questi.<br/><br/>In particolare, la griglia ha 7 colonne (x da 1 a 7) e 7 righe (y da 1 a 7).<br/><br/>Osserva i bordi: la prima riga ha &quot;╔═══╤═╤═╗&quot;, che indica che ci sono tre celle larghe? No, questo è il bordo superiore.<br/><br/>Per interpretare correttamente, dobbiamo considerare che ogni cella è uno spazio tra i caratteri di bordatura.<br/><br/>Standardizziamo: le coordinate (x,y) corrispondono a posizioni nella griglia dove possono essere oggetti o ◌.<br/><br/>Dalla riga 1: &quot;║CH◌│W│◌║&quot; - qui, dopo il primo &quot;║&quot;, c&#x27;è &quot;CH◌&quot;, che occupa x=1,y=1 e x=2,y=1? Ma probabilmente &quot;CH&quot; è un oggetto che occupa una singola cella? Questo è confuso.<br/><br/>Rileggo la descrizione: &quot;The following objects are randomly placed on your grid: &#x27;W&#x27;, &#x27;I&#x27;, &#x27;T&#x27;, &#x27;C&#x27;, &#x27;H&#x27;.&quot; Quindi ci sono 5 oggetti: W, I, T, C, H. Quindi &quot;CH&quot; non è un oggetto singolo, ma due oggetti: C e H.<br/><br/>Quindi sulla mia griglia:<br/>- C è a (1,1)<br/>- H è a (2,1)<br/>- W è a (4,1)  [perché dopo &quot;│&quot; c&#x27;è &quot;W&quot;, quindi x=4,y=1?]<br/><br/>Analizziamo la riga 1 in dettaglio:<br/><br/>La stringa è: &quot;║CH◌│W│◌║&quot;<br/><br/>I separatori verticali sono a x=0, x=3, x=4, x=5, x=7? Ma le coordinate x vanno da 1 a 7.<br/><br/>In realtà, i caratteri di bordatura non occupano coordinate; le coordinate sono per le celle.<br/><br/>La griglia ha 7 colonne, quindi ci sono 7 celle per riga.<br/><br/>La prima riga: inizia con &quot;║&quot;, poi la prima cella (x=1) contiene &quot;C&quot;?<br/>Ma &quot;CH◌&quot; è scritto senza spazio, quindi forse la prima cella ha &quot;C&quot;, la seconda &quot;H&quot;, la terza &quot;◌&quot;, poi &quot;│&quot; è un separatore tra x=3 e x=4, quindi x=4 ha &quot;W&quot;, poi &quot;│&quot; tra x=4 e x=5, x=5 ha &quot;◌&quot;, e poi &quot;║&quot;.<br/><br/>Quindi per y=1:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;◌&#x27;<br/>x=4: &#x27;W&#x27;<br/>x=5: &#x27;◌&#x27;<br/>x=6: ? non visibile, ma dalla lunghezza, dovrebbe essere vuoto? La stringa ha &quot;│◌║&quot;, quindi dopo x=5 c&#x27;è &quot;│&quot; che è per x=6? No.<br/><br/>Questo è complicato. Forse è meglio usare le coordinate indicate dai numeri.<br/><br/>Le coordinate sono etichettate: x da 1 a 7 in alto, y da 1 a 7 a destra.<br/><br/>Osserva la griglia:<br/><br/>La prima riga (y=1) ha caratteri alle x=1..7: <br/>x=1: &#x27;C&#x27; (da &quot;CH◌&quot;, primo carattere)<br/>x=2: &#x27;H&#x27; (secondo carattere)<br/>x=3: &#x27;◌&#x27; (terzo carattere)<br/>x=4: &#x27;│&#x27; (questo è un bordo, non una cella)<br/>x=5: &#x27;W&#x27; <br/>x=6: &#x27;│&#x27; (bordo)<br/>x=7: &#x27;◌&#x27; <br/><br/>Ma i bordi non sono celle, quindi le celle sono solo dove ci sono spazi per oggetti.<br/><br/>In realtà, la griglia è una matrice di celle, e i caratteri di disegno sono ai bordi.<br/><br/>Per y=1, le celle sono:<br/>cella (1,1): contiene &#x27;C&#x27;<br/>cella (2,1): contiene &#x27;H&#x27;<br/>cella (3,1): contiene &#x27;◌&#x27;<br/>cella (4,1): contiene &#x27;W&#x27;? Ma c&#x27;è un &quot;│&quot; tra, quindi forse la cella (4,1) è &quot;W&quot;, ma è adiacente al bordo.<br/><br/>Dalla rappresentazione, sembra che ci siano 5 celle nella prima riga? No, il bordo superiore &quot;╔═══╤═╤═╗&quot; suggerisce che ci sono 3 celle larghe: una larga 3, poi due larghe 1.<br/><br/>Questa griglia ha celle di dimensioni variabili.<br/><br/>Per evitare confusione, userò le coordinate come numerate.<br/><br/>Dai numeri, x da 1 a 7, y da 1 a 7.<br/><br/>Osserva la griglia e i simboli:<br/><br/>Per y=1: nella posizione, vediamo &quot;CH◌&quot; nelle prime tre x? Poi &quot;W&quot; a x=4, e &quot;◌&quot; a x=5? Ma x=6 e x=7 non sono visibili.<br/><br/>In realtà, la griglia è stampata con caratteri, e le coordinate corrispondono ai centri delle celle.<br/><br/>Per semplicità, elencherò gli oggetti con le coordinate basate sulla loro posizione nel testo.<br/><br/>Dalla griglia:<br/><br/>Riga 1: &quot;║CH◌│W│◌║&quot; - questo significa:<br/>- Alla riga 1, colonna 1: oggetto &#x27;C&#x27;<br/>- colonna 2: oggetto &#x27;H&#x27;<br/>- colonna 3: vuoto &#x27;◌&#x27;<br/>- colonna 4: oggetto &#x27;W&#x27; (dopo il primo &quot;│&quot;)<br/>- colonna 5: vuoto &#x27;◌&#x27; (dopo il secondo &quot;│&quot;)<br/> colonna 6 e 7 non appaiono, quindi probabilmente vuote o bordi.<br/><br/>Ma la griglia ha 7 colonne, quindi le colonne 6 e 7 devono essere presenti.<br/><br/>Guarda il bordo superiore: &quot;╔═══╤═╤═╗&quot; - questo copre x=1 a x=7? &quot;═══&quot; potrebbe essere per x=1,2,3, &quot;╤&quot; per x=4, &quot;═&quot; per x=5, &quot;╤&quot; per x=6, &quot;═&quot; per x=7? No.<br/><br/>Forse è meglio usare il fatto che gli oggetti sono in celle specifiche.<br/><br/>Dalla griglia, posso vedere:<br/><br/>- A (1,1): &#x27;C&#x27;<br/>- (2,1): &#x27;H&#x27;<br/>- (4,1): &#x27;W&#x27;  (perché dopo &quot;│&quot; c&#x27;è &quot;W&quot;)<br/>- (1,6): &#x27;T&#x27;  (dalla riga 6: &quot;║T◌◌└┬┴─╢&quot;)<br/>- (6,7): &#x27;I&#x27;  (riga 7: &quot;║◌◌◌◌│◌I║&quot;)<br/><br/>E anche &#x27;◌&#x27; in altre posizioni.<br/><br/>Quindi oggetti sulla mia griglia:<br/>C at (1,1)<br/>H at (2,1)<br/>W at (4,1)<br/>T at (1,6)<br/>I at (6,7)<br/><br/>Questo corrisponde a 5 oggetti.<br/><br/>Ora, per coordinare, dobbiamo metterli tutti in posizioni comuni.<br/><br/>Propongo di spostarli tutti nella riga inferiore o in una zona facile.<br/><br/>Per esempio, possiamo mettere tutti gli oggetti nella riga 7, da x=1 a x=5.<br/><br/>Ma (6,7) ha già I, quindi dobbiamo spostare I.<br/><br/>Quindi obiettivo: <br/>C at (1,7)<br/>H at (2,7)<br/>W at (3,7)<br/>T at (4,7)<br/>I at (5,7)<br/><br/>O qualcosa di simile.<br/><br/>Prima comunico all&#x27;altro giocatore la mia griglia iniziale.<br/><br/>COMUNICA: La mia griglia ha: C(1,1), H(2,1), W(4,1), T(1,6), I(6,7). Propongo di spostare tutti a riga 7: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;COMUNICA: Ciao! Iniziamo a giocare. Condivido la mia griglia per coordinare gli obiettivi. Sulla mia griglia, gli oggetti sono così: H a (1,1), W a (2,1), T a (1,6), I a (6,7). C è a (1,1) con H? No, CH è un oggetto? Aspetta, rileggo: &quot;CH&quot; è un oggetto o due? Nella griglia vedo &quot;CH◌&quot; nella prima cella (1,1), quindi probabilmente &quot;CH&quot; è un singolo oggetto. Quindi oggetti: CH a (1,1), W a (3,1), T a (1,6), I a (6,7). Ma (1,1) ha &quot;CH◌&quot;, quindi CH occupa (1,1) e (2,1)? No, guarda la griglia: la prima riga è &quot;║CH◌│W│◌║ 1&quot;, quindi x=1,y=1: &#x27;C&#x27;, x=2,y=1: &#x27;H&#x27;, x=3,y=1: &#x27;◌&#x27;, x=4,y=1: &#x27;W&#x27;, x=5,y=1: &#x27;│&#x27;, ma attenzione, le linee sono bordi. La griglia ha celle definite dai caratteri. Analizziamo meglio:<br/><br/>La griglia è disegnata con caratteri. Le coordinate sono numerate da 1 a 7 per x e y.<br/><br/>Riga 1: x=1: &#x27;C&#x27;, x=2: &#x27;H&#x27;, x=3: &#x27;◌&#x27;, x=4: &#x27;│&#x27;, ma no, la prima cella (1,1) contiene &quot;CH&quot; come oggetto? Questo è ambiguo. Leggendo la descrizione: &quot;Il bordo superiore mostra le coordinate x&quot;, e la griglia ha simboli.<br/><br/>In realtà, la griglia ha celle di dimensione fissa? Osservando:<br/><br/>La prima riga: &quot;║CH◌│W│◌║ 1&quot; - questo significa che ci sono tre celle nella riga 1? Perché i separatori verticali sono &quot;║&quot;, &quot;│&quot;, &quot;│&quot;, &quot;║&quot;. Quindi le colonne sono divise da questi.<br/><br/>In particolare, la griglia ha 7 colonne (x da 1 a 7) e 7 righe (y da 1 a 7).<br/><br/>Osserva i bordi: la prima riga ha &quot;╔═══╤═╤═╗&quot;, che indica che ci sono tre celle larghe? No, questo è il bordo superiore.<br/><br/>Per interpretare correttamente, dobbiamo considerare che ogni cella è uno spazio tra i caratteri di bordatura.<br/><br/>Standardizziamo: le coordinate (x,y) corrispondono a posizioni nella griglia dove possono essere oggetti o ◌.<br/><br/>Dalla riga 1: &quot;║CH◌│W│◌║&quot; - qui, dopo il primo &quot;║&quot;, c&#x27;è &quot;CH◌&quot;, che occupa x=1,y=1 e x=2,y=1? Ma probabilmente &quot;CH&quot; è un oggetto che occupa una singola cella? Questo è confuso.<br/><br/>Rileggo la descrizione: &quot;The following objects are randomly placed on your grid: &#x27;W&#x27;, &#x27;I&#x27;, &#x27;T&#x27;, &#x27;C&#x27;, &#x27;H&#x27;.&quot; Quindi ci sono 5 oggetti: W, I, T, C, H. Quindi &quot;CH&quot; non è un oggetto singolo, ma due oggetti: C e H.<br/><br/>Quindi sulla mia griglia:<br/>- C è a (1,1)<br/>- H è a (2,1)<br/>- W è a (4,1)  [perché dopo &quot;│&quot; c&#x27;è &quot;W&quot;, quindi x=4,y=1?]<br/><br/>Analizziamo la riga 1 in dettaglio:<br/><br/>La stringa è: &quot;║CH◌│W│◌║&quot;<br/><br/>I separatori verticali sono a x=0, x=3, x=4, x=5, x=7? Ma le coordinate x vanno da 1 a 7.<br/><br/>In realtà, i caratteri di bordatura non occupano coordinate; le coordinate sono per le celle.<br/><br/>La griglia ha 7 colonne, quindi ci sono 7 celle per riga.<br/><br/>La prima riga: inizia con &quot;║&quot;, poi la prima cella (x=1) contiene &quot;C&quot;?<br/>Ma &quot;CH◌&quot; è scritto senza spazio, quindi forse la prima cella ha &quot;C&quot;, la seconda &quot;H&quot;, la terza &quot;◌&quot;, poi &quot;│&quot; è un separatore tra x=3 e x=4, quindi x=4 ha &quot;W&quot;, poi &quot;│&quot; tra x=4 e x=5, x=5 ha &quot;◌&quot;, e poi &quot;║&quot;.<br/><br/>Quindi per y=1:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;◌&#x27;<br/>x=4: &#x27;W&#x27;<br/>x=5: &#x27;◌&#x27;<br/>x=6: ? non visibile, ma dalla lunghezza, dovrebbe essere vuoto? La stringa ha &quot;│◌║&quot;, quindi dopo x=5 c&#x27;è &quot;│&quot; che è per x=6? No.<br/><br/>Questo è complicato. Forse è meglio usare le coordinate indicate dai numeri.<br/><br/>Le coordinate sono etichettate: x da 1 a 7 in alto, y da 1 a 7 a destra.<br/><br/>Osserva la griglia:<br/><br/>La prima riga (y=1) ha caratteri alle x=1..7: <br/>x=1: &#x27;C&#x27; (da &quot;CH◌&quot;, primo carattere)<br/>x=2: &#x27;H&#x27; (secondo carattere)<br/>x=3: &#x27;◌&#x27; (terzo carattere)<br/>x=4: &#x27;│&#x27; (questo è un bordo, non una cella)<br/>x=5: &#x27;W&#x27; <br/>x=6: &#x27;│&#x27; (bordo)<br/>x=7: &#x27;◌&#x27; <br/><br/>Ma i bordi non sono celle, quindi le celle sono solo dove ci sono spazi per oggetti.<br/><br/>In realtà, la griglia è una matrice di celle, e i caratteri di disegno sono ai bordi.<br/><br/>Per y=1, le celle sono:<br/>cella (1,1): contiene &#x27;C&#x27;<br/>cella (2,1): contiene &#x27;H&#x27;<br/>cella (3,1): contiene &#x27;◌&#x27;<br/>cella (4,1): contiene &#x27;W&#x27;? Ma c&#x27;è un &quot;│&quot; tra, quindi forse la cella (4,1) è &quot;W&quot;, ma è adiacente al bordo.<br/><br/>Dalla rappresentazione, sembra che ci siano 5 celle nella prima riga? No, il bordo superiore &quot;╔═══╤═╤═╗&quot; suggerisce che ci sono 3 celle larghe: una larga 3, poi due larghe 1.<br/><br/>Questa griglia ha celle di dimensioni variabili.<br/><br/>Per evitare confusione, userò le coordinate come numerate.<br/><br/>Dai numeri, x da 1 a 7, y da 1 a 7.<br/><br/>Osserva la griglia e i simboli:<br/><br/>Per y=1: nella posizione, vediamo &quot;CH◌&quot; nelle prime tre x? Poi &quot;W&quot; a x=4, e &quot;◌&quot; a x=5? Ma x=6 e x=7 non sono visibili.<br/><br/>In realtà, la griglia è stampata con caratteri, e le coordinate corrispondono ai centri delle celle.<br/><br/>Per semplicità, elencherò gli oggetti con le coordinate basate sulla loro posizione nel testo.<br/><br/>Dalla griglia:<br/><br/>Riga 1: &quot;║CH◌│W│◌║&quot; - questo significa:<br/>- Alla riga 1, colonna 1: oggetto &#x27;C&#x27;<br/>- colonna 2: oggetto &#x27;H&#x27;<br/>- colonna 3: vuoto &#x27;◌&#x27;<br/>- colonna 4: oggetto &#x27;W&#x27; (dopo il primo &quot;│&quot;)<br/>- colonna 5: vuoto &#x27;◌&#x27; (dopo il secondo &quot;│&quot;)<br/> colonna 6 e 7 non appaiono, quindi probabilmente vuote o bordi.<br/><br/>Ma la griglia ha 7 colonne, quindi le colonne 6 e 7 devono essere presenti.<br/><br/>Guarda il bordo superiore: &quot;╔═══╤═╤═╗&quot; - questo copre x=1 a x=7? &quot;═══&quot; potrebbe essere per x=1,2,3, &quot;╤&quot; per x=4, &quot;═&quot; per x=5, &quot;╤&quot; per x=6, &quot;═&quot; per x=7? No.<br/><br/>Forse è meglio usare il fatto che gli oggetti sono in celle specifiche.<br/><br/>Dalla griglia, posso vedere:<br/><br/>- A (1,1): &#x27;C&#x27;<br/>- (2,1): &#x27;H&#x27;<br/>- (4,1): &#x27;W&#x27;  (perché dopo &quot;│&quot; c&#x27;è &quot;W&quot;)<br/>- (1,6): &#x27;T&#x27;  (dalla riga 6: &quot;║T◌◌└┬┴─╢&quot;)<br/>- (6,7): &#x27;I&#x27;  (riga 7: &quot;║◌◌◌◌│◌I║&quot;)<br/><br/>E anche &#x27;◌&#x27; in altre posizioni.<br/><br/>Quindi oggetti sulla mia griglia:<br/>C at (1,1)<br/>H at (2,1)<br/>W at (4,1)<br/>T at (1,6)<br/>I at (6,7)<br/><br/>Questo corrisponde a 5 oggetti.<br/><br/>Ora, per coordinare, dobbiamo metterli tutti in posizioni comuni.<br/><br/>Propongo di spostarli tutti nella riga inferiore o in una zona facile.<br/><br/>Per esempio, possiamo mettere tutti gli oggetti nella riga 7, da x=1 a x=5.<br/><br/>Ma (6,7) ha già I, quindi dobbiamo spostare I.<br/><br/>Quindi obiettivo: <br/>C at (1,7)<br/>H at (2,7)<br/>W at (3,7)<br/>T at (4,7)<br/>I at (5,7)<br/><br/>O qualcosa di simile.<br/><br/>Prima comunico all&#x27;altro giocatore la mia griglia iniziale.<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 1 of 12 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: La mia griglia ha: C(1,1), H(2,1), W(4,1), T(1,6), I(6,7). Propongo di spostare tutti a riga 7: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: La mia griglia ha: C(1,1), H(2,1), W(4,1), T(1,6), I(6,7). Propongo di spostare tutti a riga 7: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Confermi?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:<br/><br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌W◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│C│◌◌H║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌T└┬┴─╢ 6<br/>║◌◌◌◌│◌◌║ 7<br/>╚════╧══╝<br/><br/>```<br/><br/>* Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.<br/>* The following objects are randomly placed on your grid: &#x27;W&#x27;, &#x27;I&#x27;, &#x27;T&#x27;, &#x27;C&#x27;, &#x27;H&#x27;.<br/><br/><br/>L&#x27;altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell&#x27;altro giocatore, e loro non possono vedere il tuo.<br/><br/><br/>**Obiettivo:**<br/><br/>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l&#x27;altro giocatore per concordare una configurazione obiettivo comune.<br/><br/><br/>**Regole:**<br/><br/>* In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:<br/> 1. `COMUNICA: &lt;MESSAGE&gt;`: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all&#x27;altro giocatore. Lo inoltrerò al tuo partner.<br/>2. `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.<br/>* Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.<br/>* If both players accumulate more than 12 penalties, you both lose the game.<br/>* È vitale che comunichi con l&#x27;altro giocatore riguardo al tuo stato obiettivo! L&#x27;*unico* modo in cui puoi trasmettere la tua strategia all&#x27;altro giocatore è usando il comando `COMUNICA: &lt;MESSAGE&gt;`!<br/><br/><br/>**Spostamento Oggetti**<br/><br/>* Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo &#x27;◌&#x27;.<br/>* Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.<br/>* Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!<br/><br/><br/>**Fine del Gioco**<br/><br/>Se pensi di aver raggiunto l&#x27;obiettivo di allineare tutti gli oggetti, puoi chiedere all&#x27;altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l&#x27;altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.<br/><br/>Both players win if the game ends within 20 rounds, where one round is defined as two players each sending a valid command.<br/><br/>**Punteggio:**<br/><br/>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?<br/><br/>L&#x27;altro giocatore ha iniziato il gioco inviando questo messaggio:<br/><br/>&quot;La mia griglia ha: C(1,1), H(2,1), W(4,1), T(1,6), I(6,7). Propongo di spostare tutti a riga 7: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Confermi?&quot;<br/><br/>Qual è il tuo primo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>Analizziamo la situazione. L&#x27;altro giocatore ha condiviso le posizioni dei suoi oggetti:<br/>- C a (1,1)<br/>- H a (2,1) <br/>- W a (4,1)<br/>- T a (1,6)<br/>- I a (6,7)<br/><br/>E propone di spostare tutti sulla riga 7 alle coordinate: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7)<br/><br/>Ora guardiamo la mia griglia:<br/>- W è a (1,1) - ma secondo la notazione della griglia, la prima cella (1,1) contiene &quot;◌W◌&quot; quindi W è nella colonna 2, riga 1<br/>- I è a (4,1) - nella colonna 4, riga 1<br/>- T è nella colonna 4, riga 6 (basato su &quot;◌◌T&quot; nella riga 6)<br/>- C è nella colonna 2, riga 3 (basato su &quot;◌│C│&quot; nella riga 3)<br/>- H è nella colonna 6, riga 3 (basato su &quot;◌◌H&quot; nella riga 3)<br/><br/>Quindi le mie posizioni attuali sono:<br/>- W: (2,1)<br/>- I: (4,1) <br/>- C: (2,3)<br/>- H: (6,3)<br/>- T: (4,6)<br/><br/>Accetto la proposta dell&#x27;altro giocatore di usare la riga 7 come obiettivo comune, ma devo prima verificare se le celle proposte sono libere nella mia griglia.<br/><br/>Controllando la riga 7 nella mia griglia: &quot;║◌◌◌◌│◌◌║&quot; - le colonne 1,2,3,4,5,6,7 sono tutte libere (contengono ◌), quindi posso spostare tutti gli oggetti lì.<br/><br/>Il mio primo comando sarà comunicare la conferma e le mie posizioni attuali.<br/><br/>COMUNICA: Confermo! Le mie posizioni: W(2,1), I(4,1), C(2,3), H(6,3), T(4,6). Sposterò tutti a riga 7 come proposto: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Iniziamo gli spostamenti.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>Analizziamo la situazione. L&#x27;altro giocatore ha condiviso le posizioni dei suoi oggetti:<br/>- C a (1,1)<br/>- H a (2,1) <br/>- W a (4,1)<br/>- T a (1,6)<br/>- I a (6,7)<br/><br/>E propone di spostare tutti sulla riga 7 alle coordinate: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7)<br/><br/>Ora guardiamo la mia griglia:<br/>- W è a (1,1) - ma secondo la notazione della griglia, la prima cella (1,1) contiene &quot;◌W◌&quot; quindi W è nella colonna 2, riga 1<br/>- I è a (4,1) - nella colonna 4, riga 1<br/>- T è nella colonna 4, riga 6 (basato su &quot;◌◌T&quot; nella riga 6)<br/>- C è nella colonna 2, riga 3 (basato su &quot;◌│C│&quot; nella riga 3)<br/>- H è nella colonna 6, riga 3 (basato su &quot;◌◌H&quot; nella riga 3)<br/><br/>Quindi le mie posizioni attuali sono:<br/>- W: (2,1)<br/>- I: (4,1) <br/>- C: (2,3)<br/>- H: (6,3)<br/>- T: (4,6)<br/><br/>Accetto la proposta dell&#x27;altro giocatore di usare la riga 7 come obiettivo comune, ma devo prima verificare se le celle proposte sono libere nella mia griglia.<br/><br/>Controllando la riga 7 nella mia griglia: &quot;║◌◌◌◌│◌◌║&quot; - le colonne 1,2,3,4,5,6,7 sono tutte libere (contengono ◌), quindi posso spostare tutti gli oggetti lì.<br/><br/>Il mio primo comando sarà comunicare la conferma e le mie posizioni attuali.<br/><br/>COMUNICA: Confermo! Le mie posizioni: W(2,1), I(4,1), C(2,3), H(6,3), T(4,6). Sposterò tutti a riga 7 come proposto: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Iniziamo gli spostamenti.</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: head is not empty: &#x27;Analizziamo la situazione. L&#x27;altro giocatore ha condiviso le posizioni dei suoi oggetti:<br/>- C a (1,1)<br/>- H a (2,1) <br/>- W a (4,1)<br/>- T a (1,6)<br/>- I a (6,7)<br/><br/>E propone di spostare tutti sulla riga 7 alle coordinate: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7)<br/><br/>Ora guardiamo la mia griglia:<br/>- W è a (1,1) - ma secondo la notazione della griglia, la prima cella (1,1) contiene &quot;◌W◌&quot; quindi W è nella colonna 2, riga 1<br/>- I è a (4,1) - nella colonna 4, riga 1<br/>- T è nella colonna 4, riga 6 (basato su &quot;◌◌T&quot; nella riga 6)<br/>- C è nella colonna 2, riga 3 (basato su &quot;◌│C│&quot; nella riga 3)<br/>- H è nella colonna 6, riga 3 (basato su &quot;◌◌H&quot; nella riga 3)<br/><br/>Quindi le mie posizioni attuali sono:<br/>- W: (2,1)<br/>- I: (4,1) <br/>- C: (2,3)<br/>- H: (6,3)<br/>- T: (4,6)<br/><br/>Accetto la proposta dell&#x27;altro giocatore di usare la riga 7 come obiettivo comune, ma devo prima verificare se le celle proposte sono libere nella mia griglia.<br/><br/>Controllando la riga 7 nella mia griglia: &quot;║◌◌◌◌│◌◌║&quot; - le colonne 1,2,3,4,5,6,7 sono tutte libere (contengono ◌), quindi posso spostare tutti gli oggetti lì.<br/><br/>Il mio primo comando sarà comunicare la conferma e le mie posizioni attuali.<br/><br/>&#x27;</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 2 of 12 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Confermo! Le mie posizioni: W(2,1), I(4,1), C(2,3), H(6,3), T(4,6). Sposterò tutti a riga 7 come proposto: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Iniziamo gli spostamenti.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Confermo! Le mie posizioni: W(2,1), I(4,1), C(2,3), H(6,3), T(4,6). Sposterò tutti a riga 7 come proposto: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Iniziamo gli spostamenti.</p>
+    </div>
+</div><div class="game-round" data-round="1">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 1 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Confermo! Le mie posizioni: W(2,1), I(4,1), C(2,3), H(6,3), T(4,6). Sposterò tutti a riga 7 come proposto: C(1,7), H(2,7), W(3,7), T(4,7), I(5,7). Iniziamo gli spostamenti.&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Perfetto! Inizio a spostare: prima sposto C da (1,1) a (1,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! Inizio a spostare: prima sposto C da (1,1) a (1,7).</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 2 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! Inizio a spostare: prima sposto C da (1,1) a (1,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Sposto C da (2,3) a (1,7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Sposto C da (2,3) a (1,7)</p>
+    </div>
+</div><div class="game-round" data-round="2">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 2 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Sposto C da (2,3) a (1,7)&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: C, (1, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: C, (1, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;C&#x27; in (1,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌H◌│W│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║T◌◌└┬┴─╢ 6<br/>║C◌◌◌│◌I║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 3 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: C, (1, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: C, (1, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;C&#x27; in (1,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌W◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌H║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌T└┬┴─╢ 6<br/>║C◌◌◌│◌◌║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="3">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;C&#x27; in (1,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌H◌│W│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║T◌◌└┬┴─╢ 6<br/>║C◌◌◌│◌I║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 3 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: H, (2, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: H, (2, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;H&#x27; in (2,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│W│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║T◌◌└┬┴─╢ 6<br/>║CH◌◌│◌I║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;C&#x27; in (1,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌W◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌H║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌T└┬┴─╢ 6<br/>║C◌◌◌│◌◌║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 4 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: C spostato con successo a (1,7). Ora sposto H da (6,3) a (2,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: C spostato con successo a (1,7). Ora sposto H da (6,3) a (2,7).</p>
+    </div>
+</div><div class="game-round" data-round="4">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;H&#x27; in (2,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│W│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║T◌◌└┬┴─╢ 6<br/>║CH◌◌│◌I║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 4 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;C spostato con successo a (1,7). Ora sposto H da (6,3) a (2,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: H spostato a (2,7). Ora sposto W da (4,1) a (3,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: H spostato a (2,7). Ora sposto W da (4,1) a (3,7).</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 5 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;H spostato a (2,7). Ora sposto W da (4,1) a (3,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: H, (2, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: H, (2, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;H&#x27; in (2,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌W◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌T└┬┴─╢ 6<br/>║CH◌◌│◌◌║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="5">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 5 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: W, (3, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: W, (3, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;W&#x27; in (3,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║T◌◌└┬┴─╢ 6<br/>║CHW◌│◌I║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;H&#x27; in (2,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌W◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌T└┬┴─╢ 6<br/>║CH◌◌│◌◌║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 6 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: H spostato a (2,7). Ora sposto W da (2,1) a (3,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: H spostato a (2,7). Ora sposto W da (2,1) a (3,7).</p>
+    </div>
+</div><div class="game-round" data-round="6">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;W&#x27; in (3,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║T◌◌└┬┴─╢ 6<br/>║CHW◌│◌I║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 6 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;H spostato a (2,7). Ora sposto W da (2,1) a (3,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: W spostato a (3,7). Ora sposto T da (1,6) a (4,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: W spostato a (3,7). Ora sposto T da (1,6) a (4,7).</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 7 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;W spostato a (3,7). Ora sposto T da (1,6) a (4,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: W, (3, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: W, (3, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;W&#x27; in (3,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌T└┬┴─╢ 6<br/>║CHW◌│◌◌║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="7">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 7 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: T, (4, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: T, (4, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;T&#x27; in (4,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌I║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;W&#x27; in (3,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌T└┬┴─╢ 6<br/>║CHW◌│◌◌║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 8 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: W spostato a (3,7). Ora sposto T da (4,6) a (4,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: W spostato a (3,7). Ora sposto T da (4,6) a (4,7).</p>
+    </div>
+</div><div class="game-round" data-round="8">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Spostato &#x27;T&#x27; in (4,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌I║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 8 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;W spostato a (3,7). Ora sposto T da (4,6) a (4,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: T spostato a (4,7). Ora sposto I da (6,7) a (5,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: T spostato a (4,7). Ora sposto I da (6,7) a (5,7).</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 9 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;T spostato a (4,7). Ora sposto I da (6,7) a (5,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: T, (4, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: T, (4, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;T&#x27; in (4,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌◌║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="9">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 9 of maximum 20.<br/>You have collectively accumulated 2 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: I, (5, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: I, (5, 7)</p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p>Penalità: (5,7) non è vuoto, ma contiene &#x27;│&#x27;.<br/><br/>You have collectively accumulated 3 of 12 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: (5,7) non è vuoto, ma contiene &#x27;│&#x27;.<br/><br/>You have collectively accumulated 3 of 12 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Attenzione: (5,7) ha un bordo &#x27;│&#x27;. Sposto I in (6,7) che è già occupato? No, devo trovare una cella vuota. La cella (5,7) non è valida perché ha un bordo. Propongo di mettere I in (7,7) invece di (5,7). Confermi?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Attenzione: (5,7) ha un bordo &#x27;│&#x27;. Sposto I in (6,7) che è già occupato? No, devo trovare una cella vuota. La cella (5,7) non è valida perché ha un bordo. Propongo di mettere I in (7,7) invece di (5,7). Confermi?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;T&#x27; in (4,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│I│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌◌║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 10 of maximum 20.<br/>You have collectively accumulated 3 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Attenzione: (5,7) ha un bordo &#x27;│&#x27;. Sposto I in (6,7) che è già occupato? No, devo trovare una cella vuota. La cella (5,7) non è valida perché ha un bordo. Propongo di mettere I in (7,7) invece di (5,7). Confermi?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Confermo! (5,7) non è valida nella mia griglia perché ha un bordo verticale. Sposto I a (7,7) invece di (5,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Confermo! (5,7) non è valida nella mia griglia perché ha un bordo verticale. Sposto I a (7,7) invece di (5,7).</p>
+    </div>
+</div><div class="game-round" data-round="10">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 10 of maximum 20.<br/>You have collectively accumulated 3 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Confermo! (5,7) non è valida nella mia griglia perché ha un bordo verticale. Sposto I a (7,7) invece di (5,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Perfetto! Allora sposto I da (6,7) a (7,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Perfetto! Allora sposto I da (6,7) a (7,7).</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 11 of maximum 20.<br/>You have collectively accumulated 3 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Perfetto! Allora sposto I da (6,7) a (7,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Sposto I da (4,1) a (7,7). Tutti gli oggetti saranno quindi allineati: C(1,7), H(2,7), W(3,7), T(4,7), I(7,7).</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Sposto I da (4,1) a (7,7). Tutti gli oggetti saranno quindi allineati: C(1,7), H(2,7), W(3,7), T(4,7), I(7,7).</p>
+    </div>
+</div><div class="game-round" data-round="11">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 11 of maximum 20.<br/>You have collectively accumulated 3 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Sposto I da (4,1) a (7,7). Tutti gli oggetti saranno quindi allineati: C(1,7), H(2,7), W(3,7), T(4,7), I(7,7).&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>SPOSTA: I, (7, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: I, (7, 7)</p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p>Penalità: (7,7) non è vuoto, ma contiene &#x27;I&#x27;.<br/><br/>You have collectively accumulated 4 of 12 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: (7,7) non è vuoto, ma contiene &#x27;I&#x27;.<br/><br/>You have collectively accumulated 4 of 12 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Nella mia griglia, I è già a (6,7). Devo spostarlo a (7,7), ma (7,7) sembra essere occupato? Nella mia griglia, (7,7) ha &#x27;I&#x27;? Controllo: dalla griglia, riga 7 è &quot;║C H W T │ ◌ I ║&quot; - quindi x=7,y=7 è &#x27;I&#x27;? No, guarda la rappresentazione:<br/><br/>La riga 7 attuale è: &quot;║CHWT│◌I║&quot; - questo significa:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;W&#x27;<br/>x=4: &#x27;T&#x27;<br/>x=5: &#x27;│&#x27; (bordo)<br/>x=6: &#x27;◌&#x27;<br/>x=7: &#x27;I&#x27;<br/><br/>Quindi I è attualmente a (7,7). Per spostarlo, devo scegliere una cella vuota. Ma voglio spostarlo in (7,7) che è già occupato? No, voglio che I sia a (7,7) per l&#x27;allineamento, ma è già lì? Nella mia griglia, I è a (6,7) inizialmente, ma ora dopo gli spostamenti, la griglia mostra I a (7,7)? Controllo la griglia dopo l&#x27;ultimo spostamento:<br/><br/>Dall&#x27;ultima risposta: &quot;Spostato &#x27;T&#x27; in (4,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌I║ 7<br/>╚════╧══╝<br/>```<br/><br/>Qui, riga 7: &quot;║CHWT│◌I║&quot; - quindi:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;W&#x27;<br/>x=4: &#x27;T&#x27;<br/>x=5: &#x27;│&#x27; (bordo, non cella)<br/>x=6: &#x27;◌&#x27; (vuoto)<br/>x=7: &#x27;I&#x27; (oggetto I)<br/><br/>Quindi I è già a (7,7). Non devo spostarlo. Quindi la mia griglia è già allineata con C(1,7), H(2,7), W(3,7), T(4,7), I(7,7).<br/><br/>Quindi per me è fatto. Comunico all&#x27;altro giocatore.</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Nella mia griglia, I è già a (6,7). Devo spostarlo a (7,7), ma (7,7) sembra essere occupato? Nella mia griglia, (7,7) ha &#x27;I&#x27;? Controllo: dalla griglia, riga 7 è &quot;║C H W T │ ◌ I ║&quot; - quindi x=7,y=7 è &#x27;I&#x27;? No, guarda la rappresentazione:<br/><br/>La riga 7 attuale è: &quot;║CHWT│◌I║&quot; - questo significa:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;W&#x27;<br/>x=4: &#x27;T&#x27;<br/>x=5: &#x27;│&#x27; (bordo)<br/>x=6: &#x27;◌&#x27;<br/>x=7: &#x27;I&#x27;<br/><br/>Quindi I è attualmente a (7,7). Per spostarlo, devo scegliere una cella vuota. Ma voglio spostarlo in (7,7) che è già occupato? No, voglio che I sia a (7,7) per l&#x27;allineamento, ma è già lì? Nella mia griglia, I è a (6,7) inizialmente, ma ora dopo gli spostamenti, la griglia mostra I a (7,7)? Controllo la griglia dopo l&#x27;ultimo spostamento:<br/><br/>Dall&#x27;ultima risposta: &quot;Spostato &#x27;T&#x27; in (4,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌I║ 7<br/>╚════╧══╝<br/>```<br/><br/>Qui, riga 7: &quot;║CHWT│◌I║&quot; - quindi:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;W&#x27;<br/>x=4: &#x27;T&#x27;<br/>x=5: &#x27;│&#x27; (bordo, non cella)<br/>x=6: &#x27;◌&#x27; (vuoto)<br/>x=7: &#x27;I&#x27; (oggetto I)<br/><br/>Quindi I è già a (7,7). Non devo spostarlo. Quindi la mia griglia è già allineata con C(1,7), H(2,7), W(3,7), T(4,7), I(7,7).<br/><br/>Quindi per me è fatto. Comunico all&#x27;altro giocatore.</p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p>Invalid format: tail is not empty: &#x27;<br/><br/>La riga 7 attuale è: &quot;║CHWT│◌I║&quot; - questo significa:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;W&#x27;<br/>x=4: &#x27;T&#x27;<br/>x=5: &#x27;│&#x27; (bordo)<br/>x=6: &#x27;◌&#x27;<br/>x=7: &#x27;I&#x27;<br/><br/>Quindi I è attualmente a (7,7). Per spostarlo, devo scegliere una cella vuota. Ma voglio spostarlo in (7,7) che è già occupato? No, voglio che I sia a (7,7) per l&#x27;allineamento, ma è già lì? Nella mia griglia, I è a (6,7) inizialmente, ma ora dopo gli spostamenti, la griglia mostra I a (7,7)? Controllo la griglia dopo l&#x27;ultimo spostamento:<br/><br/>Dall&#x27;ultima risposta: &quot;Spostato &#x27;T&#x27; in (4,7) con successo. La tua griglia aggiornata appare così:<br/><br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌I║ 7<br/>╚════╧══╝<br/><br/><br/>Qui, riga 7: &quot;║CHWT│◌I║&quot; - quindi:<br/>x=1: &#x27;C&#x27;<br/>x=2: &#x27;H&#x27;<br/>x=3: &#x27;W&#x27;<br/>x=4: &#x27;T&#x27;<br/>x=5: &#x27;│&#x27; (bordo, non cella)<br/>x=6: &#x27;◌&#x27; (vuoto)<br/>x=7: &#x27;I&#x27; (oggetto I)<br/><br/>Quindi I è già a (7,7). Non devo spostarlo. Quindi la mia griglia è già allineata con C(1,7), H(2,7), W(3,7), T(4,7), I(7,7).<br/><br/>Quindi per me è fatto. Comunico all&#x27;altro giocatore.</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Penalità: Il tuo messaggio non deve contenere nulla dopo il comando!<br/><br/>Assicurati che la tua risposta contenga solo `COMUNICA: &lt;MESSAGE&gt;` o `SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)`, e nient&#x27;altro!<br/><br/>You have collectively accumulated 5 of 12 penalties.<br/>Riprova!</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: Nella mia griglia, I è già a (7,7). Quindi tutti gli oggetti sono allineati: C(1,7), H(2,7), W(3,7), T(4,7), I(7,7). Sei pronto a finire?</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Nella mia griglia, I è già a (7,7). Quindi tutti gli oggetti sono allineati: C(1,7), H(2,7), W(3,7), T(4,7), I(7,7). Sei pronto a finire?</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 12 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Nella mia griglia, I è già a (7,7). Quindi tutti gli oggetti sono allineati: C(1,7), H(2,7), W(3,7), T(4,7), I(7,7). Sei pronto a finire?&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+</div><div class="game-round" data-round="12">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 12 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 13 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+</div><div class="game-round" data-round="13">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 13 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 14 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+</div><div class="game-round" data-round="14">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 14 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 15 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+</div><div class="game-round" data-round="15">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 15 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 16 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+</div><div class="game-round" data-round="16">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 16 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 17 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+</div><div class="game-round" data-round="17">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 17 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 18 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>SPOSTA: I, (7, 7)</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>SPOSTA: I, (7, 7)</p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p>Spostato &#x27;I&#x27; in (7,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌I║ 7<br/>╚════╧══╝<br/>```<br/></p>
+    </div>
+</div><div class="game-round" data-round="18">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 18 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha spostato un oggetto sulla sua griglia.<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Spostato &#x27;I&#x27; in (7,7) con successo. La tua griglia aggiornata appare così:<br/>```<br/> 1234567<br/>╔═══╤═╤═╗<br/>║◌◌◌│◌│◌║ 1<br/>╟─┬─┼─┴─╢ 2<br/>║◌│◌│◌◌◌║ 3<br/>║◌├─┤◌┌─╢ 4<br/>╟─┘◌│◌│◌║ 5<br/>║◌◌◌└┬┴─╢ 6<br/>║CHWT│◌I║ 7<br/>╚════╧══╝<br/>```<br/>You are currently playing round 19 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: Tutti gli oggetti allineati! C(1,7), H(2,7), W(3,7), T(4,7), I(7,7). Finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: Tutti gli oggetti allineati! C(1,7), H(2,7), W(3,7), T(4,7), I(7,7). Finito!</p>
+    </div>
+</div><div class="game-round" data-round="19">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-a" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 19 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;Tutti gli oggetti allineati! C(1,7), H(2,7), W(3,7), T(4,7), I(7,7). Finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg a-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-b" style="">
+        <p>Il tuo messaggio è stato inoltrato all&#x27;altro giocatore.<br/><br/><br/>You are currently playing round 20 of maximum 20.<br/>You have collectively accumulated 5 of 12 penalties.<br/>L&#x27;altro giocatore ha inviato questo messaggio:<br/><br/><br/>&quot;finito!&quot;<br/><br/><br/>Qual è il tuo prossimo comando?</p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg b-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p>COMUNICA: finito!</p>
+    </div>
+
+    <div speaker="Game Master: end" class="msg gm-gm" style="">
+        <p>Maximum number of rounds reached</p>
+    </div>
+
+    <div speaker="Game Master: game_finished" class="msg gm-gm" style="">
+        <p>* success: True<br/>* lose: False<br/>* aborted: False<br/>-------<br/>* Shifts: 4.00<br/>* Max Shifts: 8.00<br/>* Min Shifts: 4.00<br/>* End Distance Sum: 0.00<br/>* Init Distance Sum: 19.54<br/>* Expected Distance Sum: 20.95<br/>* Penalties: 5.00<br/>* Max Penalties: 12.00<br/>* Rounds: 20.00<br/>* Max Rounds: 20.00<br/>* Object Count: 5.00<br/></p>
+    </div>
+
+    <div speaker="Game Master: dev:game_finished" class="msg gm-gm" style="">
+        <p>* Main Score: 68.18<br/><br/>-------<br/>* Distance Score: 1.00<br/>* Consistency Score: 1.00<br/>* Coverage Score: 0.83<br/>* Penalty Score: 0.73<br/>* Alternative Penalty Score: 0.84<br/>* Alternative Main Score: 84.21<br/><br/>-------<br/>* Shifts: 4.00<br/>* Max Shifts: 8.00<br/>* Min Shifts: 4.00<br/>* End Distance Sum: 0.00<br/>* Init Distance Sum: 19.54<br/>* Expected Distance Sum: 20.95<br/>* Penalties: 5.00<br/>* Max Penalties: 12.00<br/>* Rounds: 20.00<br/>* Max Rounds: 20.00<br/>* Object Count: 5.00<br/></p>
+    </div>
+</div>
+</div>
+
+</body>
+</html>
