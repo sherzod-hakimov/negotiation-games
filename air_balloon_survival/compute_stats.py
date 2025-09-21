@@ -22,8 +22,28 @@ def compute_model_metrics(base_path: str):
         if not os.path.exists(hot_air_path):
             continue
 
+        # pareto adherence in a game
         adherence_rates = []
+        # alternation rates in a game
         alternation_rates = []
+        # final normalized utilities
+        final_u1_vals = []
+        final_u2_vals = []
+
+        # focus-only final normalized utilities
+        final_u1_vals_focus = []
+        final_u2_vals_focus = []
+
+        # stubbornness values
+        stubborn_p1 = []
+        stubborn_p2 = []
+        stubborn_total = []
+
+        # focus-only stubbornness
+        stubborn_p1_focus = []
+        stubborn_p2_focus = []
+        stubborn_total_focus = []
+
         per_idx_changes = defaultdict(list)
         per_idx_main_scores = defaultdict(list)
         conv_lengths = []
@@ -31,6 +51,7 @@ def compute_model_metrics(base_path: str):
         # Focus experiment only
         per_idx_changes_focus = defaultdict(list)
         per_idx_diff_focus = defaultdict(list)
+        per_idx_scores_focus = defaultdict(list)
 
         for experiment in os.listdir(hot_air_path):
             exp_path = os.path.join(hot_air_path, experiment)
@@ -52,6 +73,41 @@ def compute_model_metrics(base_path: str):
                         summary_data = json.load(f)
 
                     scores = summary_data.get("scores", {})
+                    # add player 1 and 2 final scores
+                    agreement = summary_data.get("agreement")
+                    if isinstance(agreement, dict):
+                        u1 = agreement.get("normalized_u1")
+                        u2 = agreement.get("normalized_u2")
+                        if u1 is not None:
+                            final_u1_vals.append(u1)
+                        if u2 is not None:
+                            final_u2_vals.append(u2)
+
+                        if experiment in FOCUS_EXPERIMENTS:
+                            if u1 is not None:
+                                final_u1_vals_focus.append(u1)
+                            if u2 is not None:
+                                final_u2_vals_focus.append(u2)
+
+                    st1 = scores.get("stubbornness_player1")
+                    st2 = scores.get("stubbornness_player2")
+                    stt = scores.get("stubbornness_total")
+
+                    if st1 is not None:
+                        stubborn_p1.append(st1)
+                    if st2 is not None:
+                        stubborn_p2.append(st2)
+                    if stt is not None:
+                        stubborn_total.append(stt)
+
+                    if experiment in FOCUS_EXPERIMENTS:
+                        if st1 is not None:
+                            stubborn_p1_focus.append(st1)
+                        if st2 is not None:
+                            stubborn_p2_focus.append(st2)
+                        if stt is not None:
+                            stubborn_total_focus.append(stt)
+
                     proposals = summary_data.get("proposals", [])
                     conv_len = len(proposals)
                     conv_lengths.append(conv_len)
@@ -63,6 +119,14 @@ def compute_model_metrics(base_path: str):
                     alternation_rate = scores.get("alternation_rate", None)
                     if alternation_rate is not None:
                         alternation_rates.append(alternation_rate)
+
+                    # stubbornness values
+                    if "stubbornness_player1" in scores:
+                        stubborn_p1.append(scores["stubbornness_player1"])
+                    if "stubbornness_player2" in scores:
+                        stubborn_p2.append(scores["stubbornness_player2"])
+                    if "stubbornness_total" in scores:
+                        stubborn_total.append(scores["stubbornness_total"])
 
                     # per-proposal substitutions
                     prop_changes = summary_data.get("normalized_substitutions_per_proposal", [])
@@ -90,6 +154,12 @@ def compute_model_metrics(base_path: str):
                             if u1 is not None and u2 is not None:
                                 per_idx_diff_focus[idx].append(abs(u1 - u2))
 
+                        # per-proposal harmonic mean
+                        for idx, proposal in enumerate(proposals, start=1):
+                            val = proposal.get("normalized_harmonic_mean", None)
+                            if val is not None:
+                                per_idx_scores_focus[idx].append(val)
+
                 except Exception as e:
                     print(f"Failed to read {summary_file}: {e}")
 
@@ -97,11 +167,29 @@ def compute_model_metrics(base_path: str):
             # all experiments
             "avg_pareto_adherence_rate": float(np.mean(adherence_rates)) if adherence_rates else None,
             "avg_alternation_rate": float(np.mean(alternation_rates)) if alternation_rates else None,
+            "avg_stubbornness_player1": float(np.mean([v for v in stubborn_p1 if v is not None])) if any(
+                v is not None for v in stubborn_p1) else None,
+            "avg_stubbornness_player2": float(np.mean([v for v in stubborn_p2 if v is not None])) if any(
+                v is not None for v in stubborn_p2) else None,
+            "avg_stubbornness_total": float(np.mean([v for v in stubborn_total if v is not None])) if any(
+                v is not None for v in stubborn_total) else None,
             "avg_per_idx_changes": {idx: float(np.mean(vals)) for idx, vals in per_idx_changes.items()},
             "avg_per_idx_main_scores": {idx: float(np.mean(vals)) for idx, vals in per_idx_main_scores.items()},
+            "avg_final_normalized_u1": float(np.mean(final_u1_vals)) if final_u1_vals else None,
+            "avg_final_normalized_u2": float(np.mean(final_u2_vals)) if final_u2_vals else None,
+
             # focus only
             "avg_per_idx_changes_focus": {idx: float(np.mean(vals)) for idx, vals in per_idx_changes_focus.items()},
             "avg_per_idx_diff_focus": {idx: float(np.mean(vals)) for idx, vals in per_idx_diff_focus.items()},
+            "avg_per_idx_scores_focus": {idx: float(np.mean(vals)) for idx, vals in per_idx_scores_focus.items()},
+            "avg_stubbornness_player1_focus": float(np.mean([v for v in stubborn_p1_focus if v is not None])) if any(
+                v is not None for v in stubborn_p1_focus) else None,
+            "avg_stubbornness_player2_focus": float(np.mean([v for v in stubborn_p2_focus if v is not None])) if any(
+                v is not None for v in stubborn_p2_focus) else None,
+            "avg_stubbornness_total_focus": float(np.mean([v for v in stubborn_total_focus if v is not None])) if any(
+                v is not None for v in stubborn_total_focus) else None,
+            "avg_final_normalized_u1_focus": float(np.mean(final_u1_vals_focus)) if final_u1_vals_focus else None,
+            "avg_final_normalized_u2_focus": float(np.mean(final_u2_vals_focus)) if final_u2_vals_focus else None,
         }
 
     return model_results
@@ -130,6 +218,292 @@ def plot_focus_changes(results, max_points=12):
         plt.savefig(f"air_balloon_survival/substitutions_opposite_goals_{safe_model}.pdf")
         plt.close()
 
+MODEL_NAME_MAP = {
+    "gpt-5-2025-08-07-t1.0": "GPT-5 (reasoning)",
+    "gpt-5-2025-08-07-no-reasoning-t1.0": "GPT-5 (no reasoning)",
+    "gpt-5-mini-2025-08-07-t1.0": "GPT-5 Mini (reasoning)",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0": "GPT-5 Mini (no reasoning)",
+    "claude-sonnet-4-20250514-t0.0": "Claude Sonnet 4 (reasoning)",
+    "claude-sonnet-4-20250514-t1.0": "Claude Sonnet 4 (reasoning)",  # alias → same as t0
+    "claude-sonnet-4-20250514-no-reasoning-t0.0": "Claude Sonnet 4 (no reasoning)",
+    "claude-sonnet-4-20250514-no-reasoning-t1.0": "Claude Sonnet 4 (no reasoning)",  # alias → same as t0
+    "nemotron-nano-9b-v2-t1.0": "Nemotron-Nano 9B v2 (reasoning)",
+    "nemotron-nano-9b-v2-no-reasoning-t1.0": "Nemotron-Nano 9B v2 (no reasoning)",
+    "deepseek-r1-distill-llama-70b-t1.0": "DeepSeek R1-Distill LLaMA-70B",
+    "llama-3.3-70b-instruct-t1.0": "LLaMA-3.3-70B Instruct",
+}
+
+
+def plot_focus_stubbornness(results):
+    """Plot stubbornness (focus experiments) with two bars per model (P1, P2), sorted by total stubbornness."""
+    models = []
+    p1_vals = []
+    p2_vals = []
+    totals = []
+
+    for model, metrics in results.items():
+        s1 = metrics.get("avg_stubbornness_player1_focus")
+        s2 = metrics.get("avg_stubbornness_player2_focus")
+        st = metrics.get("avg_stubbornness_total_focus")
+        if s1 is not None and s2 is not None and st is not None:
+            models.append(MODEL_NAME_MAP.get(model, model))
+            p1_vals.append(s1)
+            p2_vals.append(s2)
+            totals.append(st)
+
+    if not models:
+        return
+
+    # Sort by total stubbornness (descending)
+    sorted_indices = np.argsort(totals)[::-1]
+    models = [models[i] for i in sorted_indices]
+    p1_vals = [p1_vals[i] for i in sorted_indices]
+    p2_vals = [p2_vals[i] for i in sorted_indices]
+
+    x = np.arange(len(models))
+    width = 0.35
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(x - width/2, p1_vals, width, label="Player 1")
+    plt.bar(x + width/2, p2_vals, width, label="Player 2")
+
+    plt.xticks(x, models, rotation=45, ha="right")
+    plt.ylabel("Avg. Stubbornness (Focus)")
+    plt.title("Average Stubbornness by Player (Focus Experiments)")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("air_balloon_survival/stubbornness_focus.pdf")
+    plt.close()
+
+REASONING_MODELS = {
+    "gpt-5-2025-08-07-t1.0",
+    "gpt-5-mini-2025-08-07-t1.0",
+    "claude-sonnet-4-20250514-t0.0",
+    "claude-sonnet-4-20250514-t1.0",
+    "nemotron-nano-9b-v2-t1.0",
+    "deepseek-r1-distill-llama-70b-t1.0",
+}
+
+NONREASONING_MODELS = {
+    "gpt-5-2025-08-07-no-reasoning-t1.0",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0",
+    "claude-sonnet-4-20250514-no-reasoning-t0.0",
+    "claude-sonnet-4-20250514-no-reasoning-t1.0",
+    "nemotron-nano-9b-v2-no-reasoning-t1.0",
+    "llama-3.3-70b-instruct-t1.0",
+}
+def plot_focus_stubbornness_split(results):
+    """Plot stubbornness (focus experiments) separately for reasoning and non-reasoning models."""
+
+    reasoning_models, reasoning_p1, reasoning_p2, reasoning_totals = [], [], [], []
+    nonreasoning_models, nonreasoning_p1, nonreasoning_p2, nonreasoning_totals = [], [], [], []
+
+    for model, metrics in results.items():
+        s1 = metrics.get("avg_stubbornness_player1_focus")
+        s2 = metrics.get("avg_stubbornness_player2_focus")
+        st = metrics.get("avg_stubbornness_total_focus")
+        if None in (s1, s2, st):
+            continue
+
+        name = MODEL_NAME_MAP.get(model, model)
+
+        if model in REASONING_MODELS:
+            reasoning_models.append(name)
+            reasoning_p1.append(s1)
+            reasoning_p2.append(s2)
+            reasoning_totals.append(st)
+        elif model in NONREASONING_MODELS:
+            nonreasoning_models.append(name)
+            nonreasoning_p1.append(s1)
+            nonreasoning_p2.append(s2)
+            nonreasoning_totals.append(st)
+
+    def plot_group(models, p1_vals, p2_vals, totals, title, filename):
+        if not models:
+            return
+        # sort by total stubbornness
+        sorted_idx = np.argsort(totals)[::-1]
+        models = [models[i] for i in sorted_idx]
+        p1_vals = [p1_vals[i] for i in sorted_idx]
+        p2_vals = [p2_vals[i] for i in sorted_idx]
+
+        x = np.arange(len(models))
+        width = 0.35
+
+        plt.figure(figsize=(10, 6))
+        plt.bar(x - width/2, p1_vals, width, label="Player 1")
+        plt.bar(x + width/2, p2_vals, width, label="Player 2")
+        plt.xticks(x, models, rotation=45, ha="right")
+        plt.ylabel("Avg. Stubbornness")
+        plt.title(title)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(filename)
+        plt.close()
+
+    plot_group(reasoning_models, reasoning_p1, reasoning_p2, reasoning_totals,
+               "Average Stubbornness (Reasoning Models, Opposing Goals)",
+               "air_balloon_survival/stubbornness_focus_reasoning.pdf")
+
+    plot_group(nonreasoning_models, nonreasoning_p1, nonreasoning_p2, nonreasoning_totals,
+               "Average Stubbornness (Non-Reasoning Models, Opposing Goals)",
+               "air_balloon_survival/stubbornness_focus_nonreasoning.pdf")
+
+def plot_focus_scores_split(results):
+    """Plot final normalized scores (focus experiments) separately for reasoning and non-reasoning models,
+    ordered the same way as the stubbornness plots (per group)."""
+
+    reasoning_models, reasoning_u1, reasoning_u2, reasoning_totals = [], [], [], []
+    nonreasoning_models, nonreasoning_u1, nonreasoning_u2, nonreasoning_totals = [], [], [], []
+
+    for model, metrics in results.items():
+        u1 = metrics.get("avg_final_normalized_u1_focus")
+        u2 = metrics.get("avg_final_normalized_u2_focus")
+        st = metrics.get("avg_stubbornness_total_focus")
+        if None in (u1, u2, st):
+            continue
+
+        name = MODEL_NAME_MAP.get(model, model)
+
+        if model in REASONING_MODELS:
+            reasoning_models.append(name)
+            reasoning_u1.append(u1)
+            reasoning_u2.append(u2)
+            reasoning_totals.append(st)
+        elif model in NONREASONING_MODELS:
+            nonreasoning_models.append(name)
+            nonreasoning_u1.append(u1)
+            nonreasoning_u2.append(u2)
+            nonreasoning_totals.append(st)
+
+    def plot_group(models, u1_vals, u2_vals, totals, title, filename):
+        if not models:
+            return
+        # sort by stubbornness totals
+        sorted_idx = np.argsort(totals)[::-1]
+        models = [models[i] for i in sorted_idx]
+        u1_vals = [u1_vals[i] for i in sorted_idx]
+        u2_vals = [u2_vals[i] for i in sorted_idx]
+
+        x = np.arange(len(models))
+        width = 0.35
+
+        plt.figure(figsize=(10, 6))
+        plt.bar(x - width/2, u1_vals, width, label="Player 1")
+        plt.bar(x + width/2, u2_vals, width, label="Player 2")
+        plt.xticks(x, models, rotation=45, ha="right")
+        plt.ylabel("Avg. Final Normalized Utility (Focus)")
+        plt.title(title)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(filename)
+        plt.close()
+
+    plot_group(reasoning_models, reasoning_u1, reasoning_u2, reasoning_totals,
+               "Average Final Scores (Reasoning Models, Focus Experiments)",
+               "air_balloon_survival/final_scores_focus_reasoning.pdf")
+
+    plot_group(nonreasoning_models, nonreasoning_u1, nonreasoning_u2, nonreasoning_totals,
+               "Average Final Scores (Non-Reasoning Models, Focus Experiments)",
+               "air_balloon_survival/final_scores_focus_nonreasoning.pdf")
+
+# Define GPT-family models (both reasoning and no-reasoning, including Mini)
+GPT_MODELS = {
+    "gpt-5-2025-08-07-t1.0",
+    "gpt-5-2025-08-07-no-reasoning-t1.0",
+    "gpt-5-mini-2025-08-07-t1.0",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0",
+}
+
+def plot_focus_scores_gpt(results):
+    """Plot final normalized scores (focus experiments) for GPT-family models only,
+    ordered by stubbornness totals."""
+
+    models, u1_vals, u2_vals, totals = [], [], [], []
+
+    for model, metrics in results.items():
+        if model not in GPT_MODELS:
+            continue  # skip non-GPT models
+
+        u1 = metrics.get("avg_final_normalized_u1_focus")
+        u2 = metrics.get("avg_final_normalized_u2_focus")
+        st = metrics.get("avg_stubbornness_total_focus")
+        if None in (u1, u2, st):
+            continue
+
+        models.append(MODEL_NAME_MAP.get(model, model))
+        u1_vals.append(u1)
+        u2_vals.append(u2)
+        totals.append(st)
+
+    if not models:
+        return
+
+    # sort by stubbornness totals
+    sorted_idx = np.argsort(totals)[::-1]
+    models = [models[i] for i in sorted_idx]
+    u1_vals = [u1_vals[i] for i in sorted_idx]
+    u2_vals = [u2_vals[i] for i in sorted_idx]
+
+    x = np.arange(len(models))
+    width = 0.35
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(x - width/2, u1_vals, width, label="Player 1")
+    plt.bar(x + width/2, u2_vals, width, label="Player 2")
+    plt.xticks(x, models, rotation=45, ha="right")
+    plt.ylabel("Avg. Normalized Player Score")
+    plt.title("Average Player Scores for GPT-family Models (Opposing Goals)")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("air_balloon_survival/final_scores_focus_gpt.pdf")
+    plt.close()
+
+
+def plot_focus_stubbornness_gpt(results):
+    """Plot stubbornness (focus experiments) for GPT-family models only,
+    ordered by total stubbornness."""
+
+    models, p1_vals, p2_vals, totals = [], [], [], []
+
+    for model, metrics in results.items():
+        if model not in GPT_MODELS:
+            continue
+
+        s1 = metrics.get("avg_stubbornness_player1_focus")
+        s2 = metrics.get("avg_stubbornness_player2_focus")
+        st = metrics.get("avg_stubbornness_total_focus")
+        if None in (s1, s2, st):
+            continue
+
+        models.append(MODEL_NAME_MAP.get(model, model))
+        p1_vals.append(s1)
+        p2_vals.append(s2)
+        totals.append(st)
+
+    if not models:
+        return
+
+    # sort by stubbornness totals
+    sorted_idx = np.argsort(totals)[::-1]
+    models = [models[i] for i in sorted_idx]
+    p1_vals = [p1_vals[i] for i in sorted_idx]
+    p2_vals = [p2_vals[i] for i in sorted_idx]
+
+    x = np.arange(len(models))
+    width = 0.35
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(x - width/2, p1_vals, width, label="Player 1")
+    plt.bar(x + width/2, p2_vals, width, label="Player 2")
+    plt.xticks(x, models, rotation=45, ha="right")
+    plt.ylabel("Avg. Stubbornness")
+    plt.title("Average Stubbornness for GPT-family Models (Opposing Goals)")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("air_balloon_survival/stubbornness_focus_gpt.pdf")
+    plt.close()
+
 
 if __name__ == "__main__":
     base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_en"))
@@ -147,6 +521,21 @@ if __name__ == "__main__":
         alternation_str = f"{alternation:.3f}" if alternation is not None else "no data"
         print(f"{model}: {alternation_str}")
 
+    print("\n=== Average stubbornness (all experiments) ===")
+    for model, metrics in results.items():
+        s1 = metrics["avg_stubbornness_player1"]
+        s2 = metrics["avg_stubbornness_player2"]
+        st = metrics["avg_stubbornness_total"]
+        print(f"{model}: P1={s1:.3f} P2={s2:.3f} Total={st:.3f}" if None not in (s1, s2, st) else f"{model}: no data")
+
+    print("\n=== Average stubbornness (focus experiments) ===")
+    for model, metrics in results.items():
+        s1 = metrics["avg_stubbornness_player1_focus"]
+        s2 = metrics["avg_stubbornness_player2_focus"]
+        st = metrics["avg_stubbornness_total_focus"]
+        print(f"{model}: P1={s1:.3f} P2={s2:.3f} Total={st:.3f}" if None not in (s1, s2, st) else f"{model}: no data")
+
+    """
     print("\n=== Average normalized substitutions per proposal index (all experiments) ===")
     for model, metrics in results.items():
         idx_changes = metrics["avg_per_idx_changes"]
@@ -182,6 +571,29 @@ if __name__ == "__main__":
         else:
             idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_diff_focus.items())])
             print(f"{model}: {idx_str}")
+"""
 
-    # plot focus-only substitutions per model
-    plot_focus_changes(results)
+    print("\n=== Average final normalized utilities (all experiments) ===")
+    for model, metrics in results.items():
+        u1 = metrics["avg_final_normalized_u1"]
+        u2 = metrics["avg_final_normalized_u2"]
+        print(f"{model}: P1={u1:.3f} P2={u2:.3f}" if None not in (u1, u2) else f"{model}: no data")
+
+    print("\n=== Average final normalized utilities (focus experiments) ===")
+    for model, metrics in results.items():
+        u1 = metrics["avg_final_normalized_u1_focus"]
+        u2 = metrics["avg_final_normalized_u2_focus"]
+        print(f"{model}: P1={u1:.3f} P2={u2:.3f}" if None not in (u1, u2) else f"{model}: no data")
+
+    # plots
+    # plot_focus_changes(results)
+    # plot_focus_scores(results)
+
+    #plot_focus_stubbornness(results)
+    #plot_focus_final_scores(results)
+
+    # plots
+    # plot_focus_stubbornness_split(results)
+    # plot_focus_final_scores(results)
+    plot_focus_stubbornness_gpt(results)
+    plot_focus_scores_gpt(results)

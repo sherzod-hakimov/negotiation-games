@@ -156,9 +156,8 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
                 actor = "Player 1" if event["to"] == "Player 2" else "Player 2"
 
                 try:
-                    response = event["action"]["content"]
                     proposals_found = re.findall(proposal_tag, response, flags=re.DOTALL)
-                    proposals_found = [proposal for proposal in proposals_found if "{'A', 'B', 'C', …}" not in proposal]
+                    proposals_found = [p for p in proposals_found if "{'A', 'B', 'C'}" not in p]
                     for match in proposals_found:
                         set_str = match.split(":", 1)[1].strip()
                         proposal = ast.literal_eval(set_str)
@@ -184,8 +183,8 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
 
     if log_data["final deal"]:
         scored_agreement = score_set(log_data["final deal"])
-        scored_agreement["by"] = 'Player'  # or leave out if not relevant
-        scored_agreement["turn"] = turns  # maybe set to total turns
+        scored_agreement["by"] = "Player"
+        scored_agreement["turn"] = turns
         summary["agreement"] = scored_agreement
 
     # Store maxima
@@ -197,7 +196,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     summary["proposals"] = sorted(summary["proposals"], key=lambda x: x["turn"])
     summary["nb_proposals"] = len(summary["proposals"])
 
-    # --- Compute Pareto adherence rate (per-proposal) ---
+    # --- Compute Pareto adherence rate ---
     pareto_flags = [p.get("pareto_optimum", None) for p in summary["proposals"]]
     valid_flags = [flag for flag in pareto_flags if flag is not None]
     pareto_adherence_rate = (
@@ -205,7 +204,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         if valid_flags else None
     )
 
-    # --- Compute Alternation rate ---
+    # --- Alternation rate ---
     alternations = 0
     proposers = [p["by"] for p in summary["proposals"]]
     for i in range(1, len(proposers)):
@@ -216,21 +215,39 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         if len(proposers) > 1 else None
     )
 
-    # --- Compute normalized substitutions ---
+    # --- Normalized substitutions ---
     normalized_changes = []
     for i in range(1, len(summary["proposals"])):
         prev_items = set(summary["proposals"][i - 1]["items"])
         curr_items = set(summary["proposals"][i]["items"])
-        subs = len(prev_items ^ curr_items)  # symmetric difference
+        subs = len(prev_items ^ curr_items)
         prev_size = len(prev_items) if len(prev_items) > 0 else 1
         normalized_changes.append(subs / prev_size)
 
     avg_normalized_subs = float(sum(normalized_changes) / len(normalized_changes)) if normalized_changes else None
-
-    # Store both
     summary["normalized_substitutions_per_proposal"] = normalized_changes
 
-    # Compute final deal scores
+    # --- Stubbornness ---
+    stubbornness = {"Player 1": None, "Player 2": None}
+    total_repeats = 0
+    total_props = len(summary["proposals"])
+
+    for player in ["Player 1", "Player 2"]:
+        player_props = [tuple(p["items"]) for p in summary["proposals"] if p["by"] == player]
+        if player_props:
+            seen = set()
+            repeats = 0
+            for prop in player_props:
+                if prop in seen:
+                    repeats += 1
+                else:
+                    seen.add(prop)
+            stubbornness[player] = repeats / len(player_props)
+            total_repeats += repeats
+
+    stubbornness_total = (total_repeats / total_props) if total_props > 0 else None
+
+    # --- Final deal scores ---
     if log_data["final deal"]:
         summary["scores"] = {
             "player1_score": summary["agreement"]["utility_player1"],
@@ -244,15 +261,21 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
             "pareto_adherence_rate": pareto_adherence_rate,
             "alternation_rate": alternation_rate,
             "avg_normalized_substitutions": avg_normalized_subs,
+            "stubbornness_player1": stubbornness["Player 1"],
+            "stubbornness_player2": stubbornness["Player 2"],
+            "stubbornness_total": stubbornness_total,
         }
     else:
         summary["scores"].update({
             "pareto_adherence_rate": pareto_adherence_rate,
             "alternation_rate": alternation_rate,
             "avg_normalized_substitutions": avg_normalized_subs,
+            "stubbornness_player1": stubbornness["Player 1"],
+            "stubbornness_player2": stubbornness["Player 2"],
+            "stubbornness_total": stubbornness_total,
         })
 
-    # --- Individual optima via knapsack ---
+    # --- Individual optima ---
     best_u1, set_u1 = dp_pseudo_poly_knapsack(item_weights, p1_prefs, game_instance["max_weight"])
     best_u2, set_u2 = dp_pseudo_poly_knapsack(item_weights, p2_prefs, game_instance["max_weight"])
 
