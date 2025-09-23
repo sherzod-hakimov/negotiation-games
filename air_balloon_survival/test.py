@@ -6,18 +6,35 @@ from collections import defaultdict
 
 # Mapping raw model names to short readable names
 MODEL_NAME_MAP = {
+    # GPT-5 family
     "gpt-5-2025-08-07-t1.0": "GPT-5 (reasoning)",
-    "gpt-5-2025-08-07-no-reasoning-t1.0": "GPT-5 (no reasoning)",
+    "gpt-5-2025-08-07-no-reasoning-t1.0": "GPT-5",
     "gpt-5-mini-2025-08-07-t1.0": "GPT-5 Mini (reasoning)",
-    "gpt-5-mini-2025-08-07-no-reasoning-t1.0": "GPT-5 Mini (no reasoning)",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0": "GPT-5 Mini",
+
+    # Qwen family
+    "qwen3-next-80b-a3b-thinking-t1.0": "Qwen3-Next-80B (reasoning)",
+    "qwen3-next-80b-a3b-instruct-t1.0": "Qwen3-Next-80B",
+
+    # Claude family
     "claude-sonnet-4-20250514-t0.0": "Claude Sonnet 4 (reasoning)",
-    "claude-sonnet-4-20250514-t1.0": "Claude Sonnet 4 (reasoning)",  # alias → same as t0
-    "claude-sonnet-4-20250514-no-reasoning-t0.0": "Claude Sonnet 4 (no reasoning)",
-    "claude-sonnet-4-20250514-no-reasoning-t1.0": "Claude Sonnet 4 (no reasoning)",  # alias → same as t0
-    "nemotron-nano-9b-v2-t1.0": "Nemotron-Nano 9B v2 (reasoning)",
-    "nemotron-nano-9b-v2-no-reasoning-t1.0": "Nemotron-Nano 9B v2 (no reasoning)",
-    "deepseek-r1-distill-llama-70b-t1.0": "DeepSeek R1-Distill LLaMA-70B",
+    "claude-sonnet-4-20250514-t1.0": "Claude Sonnet 4 (reasoning)",
+    "claude-sonnet-4-20250514-no-reasoning-t0.0": "Claude Sonnet 4",
+    "claude-sonnet-4-20250514-no-reasoning-t1.0": "Claude Sonnet 4",
+
+    # DeepSeek family
+    "deepseek-chat-v3.1-t1.0": "DeepSeek Chat v3.1",
+
+    # LLaMA family
     "llama-3.3-70b-instruct-t1.0": "LLaMA-3.3-70B Instruct",
+    "deepseek-r1-distill-llama-70b-t1.0": "DeepSeek R1-Distill LLaMA-70B",
+
+    # Nemotron family
+    "nemotron-nano-9b-v2-t1.0": "Nemotron-Nano 9B v2 (reasoning)",
+    "nemotron-nano-9b-v2-no-reasoning-t1.0": "Nemotron-Nano 9B v2",
+
+    # GPT-OSS
+    "gpt-oss-120b-t1.0": "GPT-OSS 120B",
 }
 
 def pretty_model_name(raw_name: str) -> str:
@@ -85,20 +102,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def plot_experiment_type_scores_grouped(data, output_file="experiment_scores_grouped.pdf"):
-    # Substring → pretty label
-    exp_types = {
-        "complexity": "Complexity",
-        "negotiation": "Negotiation",
-        "reasoning": "No Reasoning Tag"
-    }
-
-    # Match actual keys in your data
-    exp_keys = []
-    for raw_key in data.keys():
-        for substr, label in exp_types.items():
-            if substr in raw_key:
-                exp_keys.append((raw_key, label))
-                break
+    # Canonical experiment types with consistent order
+    exp_types = [
+        ("complexity", "Complexity", "#66c2a5"),   # green
+        ("negotiation", "Negotiation", "#fc8d62"), # orange
+        ("reasoning", "No Reasoning Tag", "#8da0cb"), # blue
+    ]
 
     # Collect all models
     all_models = sorted({m for exp_key in data for m in data[exp_key]})
@@ -107,13 +116,15 @@ def plot_experiment_type_scores_grouped(data, output_file="experiment_scores_gro
     global_scores = {}
     for model in all_models:
         total_score, count = 0, 0
-        for raw_key, _ in exp_keys:
-            stats = data.get(raw_key, {}).get(model, {"score_sum": 0.0, "total_games": 0})
-            total_games = stats["total_games"]
-            score_sum = stats["score_sum"]
-            if total_games > 0:
-                total_score += score_sum / total_games
-                count += 1
+        for raw_key, _, _ in exp_types:
+            for key in data.keys():
+                if raw_key in key:
+                    stats = data[key].get(model, {"score_sum": 0.0, "total_games": 0})
+                    total_games = stats["total_games"]
+                    score_sum = stats["score_sum"]
+                    if total_games > 0:
+                        total_score += score_sum / total_games
+                        count += 1
         global_scores[model] = total_score / count if count > 0 else 0
 
     # Sort models by global score (descending)
@@ -124,24 +135,32 @@ def plot_experiment_type_scores_grouped(data, output_file="experiment_scores_gro
     bar_width = 0.25
 
     plt.figure(figsize=(12, 6))
-    colors = plt.cm.Set2.colors[:len(exp_keys)]
 
-    for i, (raw_key, label) in enumerate(exp_keys):
+    handles = []
+    labels = []
+
+    for i, (substr, label, color) in enumerate(exp_types):
         scores = []
         for model in all_models_sorted:
-            stats = data.get(raw_key, {}).get(model, {"score_sum": 0.0, "total_games": 0})
+            # find the exp_key that matches substr
+            matching_key = next((k for k in data if substr in k), None)
+            if matching_key is None:
+                scores.append(0)
+                continue
+            stats = data[matching_key].get(model, {"score_sum": 0.0, "total_games": 0})
             total_games = stats["total_games"]
             score_sum = stats["score_sum"]
             weighted_score = score_sum / total_games if total_games > 0 else 0
             scores.append(weighted_score)
 
-        plt.bar(x + i * bar_width, scores, width=bar_width,
-                label=label, color=colors[i])
+        bar = plt.bar(x + i * bar_width, scores, width=bar_width, color=color)
+        handles.append(bar[0])
+        labels.append(label)
 
     plt.xticks(x + bar_width, all_models_sorted, rotation=45, ha="right")
     plt.ylabel("Clemscore (Air Balloon Survival)")
     plt.title("Clemscore by Model and Experiment Type")
-    plt.legend()
+    plt.legend(handles, labels)  # legend order matches bar order
     plt.tight_layout()
     plt.savefig(output_file)
     plt.close()
@@ -151,6 +170,7 @@ if __name__ == "__main__":
     base_paths = {
         "en": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_en")),
         "de": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_de")),
+        'it': os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_it"))
     }
 
     for lang, path in base_paths.items():

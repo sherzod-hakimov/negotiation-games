@@ -337,3 +337,5 @@ if __name__ == "__main__":
     traverse_results(base_path)
     base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_de"))
     traverse_results(base_path)
+    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_it"))
+    traverse_results(base_path)

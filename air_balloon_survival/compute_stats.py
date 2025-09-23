@@ -195,42 +195,59 @@ def compute_model_metrics(base_path: str):
     return model_results
 
 
-def plot_focus_changes(results, max_points=12):
-    """Plot normalized substitutions (focus experiments) per model."""
+def plot_changes(results, max_points=12):
+    """Plot normalized substitutions (all experiments) per model."""
     for model, metrics in results.items():
-        idx_changes_focus = metrics["avg_per_idx_changes_focus"]
-        if not idx_changes_focus:
+        idx_changes = metrics["avg_per_idx_changes"]
+        if not idx_changes:
             continue
 
-        xs = sorted(idx_changes_focus.keys())[:max_points]
-        ys = [idx_changes_focus[x] for x in xs]
+        xs = sorted(idx_changes.keys())[:max_points]
+        ys = [idx_changes[x] for x in xs]
 
         plt.figure(figsize=(6, 4))
         plt.plot(xs, ys, linewidth=1.5, marker="o", markersize=3)
+
+        display_name = MODEL_NAME_MAP.get(model, model)   # use mapped name
         plt.xlabel("Proposal index")
         plt.ylabel("Avg. normalized substitutions")
-        plt.title(f"Avg. Normalized substitutions over proposal idx\n{model} - opposite goals experiments")
+        plt.title(f"Substitutions over proposals in temporal order\n{display_name}")
         plt.grid(True, linestyle=":", alpha=0.6)
         plt.tight_layout()
 
-        # save one pdf per model
-        safe_model = model.replace("/", "_")
-        plt.savefig(f"air_balloon_survival/substitutions_opposite_goals_{safe_model}.pdf")
+        # save using mapped name (cleaner filenames)
+        safe_model = display_name.replace("/", "_").replace(" ", "_").replace("(", "").replace(")", "")
+        plt.savefig(f"air_balloon_survival/substitutions_all_{safe_model}.pdf")
         plt.close()
 
 MODEL_NAME_MAP = {
+    # GPT-5 family
     "gpt-5-2025-08-07-t1.0": "GPT-5 (reasoning)",
-    "gpt-5-2025-08-07-no-reasoning-t1.0": "GPT-5 (no reasoning)",
+    "gpt-5-2025-08-07-no-reasoning-t1.0": "GPT-5",
     "gpt-5-mini-2025-08-07-t1.0": "GPT-5 Mini (reasoning)",
-    "gpt-5-mini-2025-08-07-no-reasoning-t1.0": "GPT-5 Mini (no reasoning)",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0": "GPT-5 Mini",
+    "gpt-oss-120b-t1.0": "GPT-OSS 120B",
+
+    # Qwen family
+    "qwen3-next-80b-a3b-thinking-t1.0": "Qwen3-Next-80B (reasoning)",
+    "qwen3-next-80b-a3b-instruct-t1.0": "Qwen3-Next-80B",
+
+    # Claude family
     "claude-sonnet-4-20250514-t0.0": "Claude Sonnet 4 (reasoning)",
-    "claude-sonnet-4-20250514-t1.0": "Claude Sonnet 4 (reasoning)",  # alias → same as t0
-    "claude-sonnet-4-20250514-no-reasoning-t0.0": "Claude Sonnet 4 (no reasoning)",
-    "claude-sonnet-4-20250514-no-reasoning-t1.0": "Claude Sonnet 4 (no reasoning)",  # alias → same as t0
-    "nemotron-nano-9b-v2-t1.0": "Nemotron-Nano 9B v2 (reasoning)",
-    "nemotron-nano-9b-v2-no-reasoning-t1.0": "Nemotron-Nano 9B v2 (no reasoning)",
-    "deepseek-r1-distill-llama-70b-t1.0": "DeepSeek R1-Distill LLaMA-70B",
+    "claude-sonnet-4-20250514-t1.0": "Claude Sonnet 4 (reasoning)",
+    "claude-sonnet-4-20250514-no-reasoning-t0.0": "Claude Sonnet 4",
+    "claude-sonnet-4-20250514-no-reasoning-t1.0": "Claude Sonnet 4",
+
+    # DeepSeek family
+    "deepseek-chat-v3.1-t1.0": "DeepSeek Chat v3.1",
+
+    # LLaMA family
     "llama-3.3-70b-instruct-t1.0": "LLaMA-3.3-70B Instruct",
+    "deepseek-r1-distill-llama-70b-t1.0": "DeepSeek R1-Distill LLaMA-70B (reasoning)",
+
+    # Nemotron family
+    "nemotron-nano-9b-v2-t1.0": "Nemotron-Nano 9B v2 (reasoning)",
+    "nemotron-nano-9b-v2-no-reasoning-t1.0": "Nemotron-Nano 9B v2"
 }
 
 
@@ -413,6 +430,7 @@ GPT_MODELS = {
     "gpt-5-2025-08-07-no-reasoning-t1.0",
     "gpt-5-mini-2025-08-07-t1.0",
     "gpt-5-mini-2025-08-07-no-reasoning-t1.0",
+    "gpt-oss-120b-t1.0"
 }
 
 def plot_focus_scores_gpt(results):
@@ -428,8 +446,6 @@ def plot_focus_scores_gpt(results):
         u1 = metrics.get("avg_final_normalized_u1_focus")
         u2 = metrics.get("avg_final_normalized_u2_focus")
         st = metrics.get("avg_stubbornness_total_focus")
-        if None in (u1, u2, st):
-            continue
 
         models.append(MODEL_NAME_MAP.get(model, model))
         u1_vals.append(u1)
@@ -473,8 +489,8 @@ def plot_focus_stubbornness_gpt(results):
         s1 = metrics.get("avg_stubbornness_player1_focus")
         s2 = metrics.get("avg_stubbornness_player2_focus")
         st = metrics.get("avg_stubbornness_total_focus")
-        if None in (s1, s2, st):
-            continue
+        #if None in (s1, s2, st):
+        #    continue
 
         models.append(MODEL_NAME_MAP.get(model, model))
         p1_vals.append(s1)
@@ -498,10 +514,10 @@ def plot_focus_stubbornness_gpt(results):
     plt.bar(x + width/2, p2_vals, width, label="Player 2")
     plt.xticks(x, models, rotation=45, ha="right")
     plt.ylabel("Avg. Stubbornness")
-    plt.title("Average Stubbornness for GPT-family Models (Opposing Goals)")
+    plt.title("Average Stubbornness by Players (Opposing Goals)")
     plt.legend()
     plt.tight_layout()
-    plt.savefig("air_balloon_survival/stubbornness_focus_gpt.pdf")
+    plt.savefig("air_balloon_survival/stubbornness_focus_model_choice.pdf")
     plt.close()
 
 
@@ -588,6 +604,9 @@ if __name__ == "__main__":
     # plots
     # plot_focus_changes(results)
     # plot_focus_scores(results)
+
+    # Substitution plots for ALL experiments (one PDF per model)
+    plot_changes(results)
 
     #plot_focus_stubbornness(results)
     #plot_focus_final_scores(results)

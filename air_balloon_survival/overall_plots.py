@@ -81,6 +81,7 @@ if __name__ == "__main__":
     base_paths = [
         os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_en")),
         os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_de")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_it"))
     ]
 
     results = collect_scores(base_paths)
