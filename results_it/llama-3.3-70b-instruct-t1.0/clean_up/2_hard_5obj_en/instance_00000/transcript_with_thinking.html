@@ -1,0 +1,1518 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+    <style>
+        /* This CSS is based on a stack overflow answer by Roko C. Buljan in https://stackoverflow.com/a/71155446 */ 
+
+* {margin: 0; box-sizing: border-box;}
+
+body {
+  background-color: rgb(157, 152, 150);
+}
+
+.top-info {
+	text-align: center;
+	font: 1.25rem/1.5 sans-serif;
+	display: flex;
+	flex-direction: column;
+	padding: 1.25em;
+	width: 80%;
+  max-width: 1200px;
+	margin: auto;
+	background: #3f3e3e;
+	color: #fff;
+}
+
+.chat {
+  --rad: 1.5rem;
+  --rad-sm: .3rem;
+  font: 1rem/1.5 sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  width: 80%;
+  max-width: 1200px;
+  margin: auto;
+  background: #fff;
+}
+
+.msg {
+  position: relative;
+  padding: .6rem 1.2rem;
+  margin-inline: 1rem;
+  margin-block: 2rem;
+}
+
+.game-round {
+  padding: 1.5rem 0 1.5rem 0;
+  background-color: #f0f8ff; /* light background for content */
+  position: relative; /* Important to position the badge */
+  border-radius: 1rem;
+  margin: 1rem;
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1);
+}
+
+/* Badge in top-right corner */
+.game-round::before {
+  content: "Round " attr(data-round);
+  position: absolute;
+  top: .35rem;
+  right: 1.5rem;
+  color: #c4c3c3;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+/* For fenced code/monospace blocks */
+pre {
+  background: #e0e0e0;
+  border-left: .2rem solid #f36d33;
+  border-radius: .2rem;
+  color: #666;
+  font-family: monospace;
+  line-height: 1.0;
+  margin-top: 0.3rem;
+  margin-bottom: 0.5rem;
+  max-width: 100%;
+  overflow: auto;
+  padding: 0.5rem 0.2rem;
+}/* This CSS is based on a stack overflow answer by Roko C. Buljan in https://stackoverflow.com/a/71155446 */
+
+.msg.player-gm.p1, .msg.player-player.p1 {
+  border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+  margin-right: 40%;
+}
+
+.msg.player-player {
+  opacity: 0.9;
+  font-size: 0.75rem;
+}
+
+.p1 {
+  background: #f39109;
+  color: #fff;
+}
+
+.p2 {
+  background: #874aaf;
+  color: #fff;
+}
+
+.msg.player-gm.p2, .msg.player-player.p2 {
+  border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+  margin-left: 40%;
+}
+.msg.player-gm::before {
+  right: 1rem;
+}
+
+.msg.gm-player {
+  background: #c4c3c3;
+  color: #0c0c0c;
+}
+
+.msg.gm-player.p1 {
+  border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+  margin-right: 20%;
+  margin-left: 10%;
+}
+
+.msg.gm-player.p2 {
+  border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+  margin-right: 10%;
+  margin-left: 20%;
+}
+
+.msg.gm-gm {
+  border-radius: var(--rad-sm) var(--rad-sm) var(--rad-sm) var(--rad-sm);
+  background: #f1f1f1;
+  color: #373636;
+  margin-left: 20%;
+  margin-right: 20%;
+  font-size: 0.8rem;
+
+}
+
+/* speaker labels */
+
+.msg::before {
+  content: attr(speaker);
+  font-size: 0.8rem;
+  position: absolute;
+  bottom: 100%;
+  color: #888;
+  white-space: nowrap;
+
+}
+
+/* Message info displayed on the right for GM to Player 1 */
+.msg.gm-player.a::before {
+  right: 1rem;
+}
+
+/* All other cases: message info on the left */
+.msg.player-gm.a::before, .msg.gm-player.b::before, .msg.gm-gm::before {
+  left: 1rem;
+}
+    </style>
+</head>
+<body>
+
+<br/>
+
+<div class="top-info">
+    <p>Interaction Transcript for game 'clean_up', experiment '2_hard_5obj_en', episode 0 with llama-3.3-70b-instruct-t1.0.</p>
+</div>
+
+<br/>
+
+<div class="chat">
+<div class="game-round" data-round="0">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌IW║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤◌│T║ 5
+╟─┤◌├─┤◌║ 6
+║◌│◌│◌│◌║ 7
+╚═╧═╧═╧═╝
+
+</code></pre>
+<ul>
+<li>Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.</li>
+<li>The following objects are randomly placed on your grid: 'W', 'I', 'T', 'C', 'H'.</li>
+</ul>
+<p>L'altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell'altro giocatore, e loro non possono vedere il tuo.</p>
+<p><strong>Obiettivo:</strong></p>
+<p>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l'altro giocatore per concordare una configurazione obiettivo comune.</p>
+<p><strong>Regole:</strong></p>
+<ul>
+<li>In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:</li>
+<li><code>COMUNICA: &lt;MESSAGE&gt;</code>: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all'altro giocatore. Lo inoltrerò al tuo partner.</li>
+<li><code>SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)</code>: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.</li>
+<li>Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.</li>
+<li>If both players accumulate more than 12 penalties, you both lose the game.</li>
+<li>È vitale che comunichi con l'altro giocatore riguardo al tuo stato obiettivo! L'<em>unico</em> modo in cui puoi trasmettere la tua strategia all'altro giocatore è usando il comando <code>COMUNICA: &lt;MESSAGE&gt;</code>!</li>
+</ul>
+<p><strong>Spostamento Oggetti</strong></p>
+<ul>
+<li>Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo '◌'.</li>
+<li>Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.</li>
+<li>Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!</li>
+</ul>
+<p><strong>Fine del Gioco</strong></p>
+<p>Se pensi di aver raggiunto l'obiettivo di allineare tutti gli oggetti, puoi chiedere all'altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l'altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.</p>
+<p>Both players win if the game ends within 20 rounds, where one round is defined as two players each sending a valid command.</p>
+<p><strong>Punteggio:</strong></p>
+<p>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?</p>
+<p>Per favore invia un messaggio all'altro giocatore per iniziare il gioco!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Ciao! Sono pronto per iniziare il gioco. La mia griglia iniziale è:</p>
+<p>1234567
+╔══╤════╗
+║◌◌│◌◌IW║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤◌│T║ 5
+╟─┤◌├─┤◌║ 6
+║◌│◌│◌│◌║ 7
+╚═╧═╧═╧═╝
+ Propongo di iniziare a discutere su come allineare gli oggetti. Qual è la tua strategia?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Ciao! Sono pronto per iniziare il gioco. La mia griglia iniziale è:</p>
+<p>1234567
+╔══╤════╗
+║◌◌│◌◌IW║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤◌│T║ 5
+╟─┤◌├─┤◌║ 6
+║◌│◌│◌│◌║ 7
+╚═╧═╧═╧═╝
+ Propongo di iniziare a discutere su come allineare gli oggetti. Qual è la tua strategia?</p></p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p><p>Invalid format: tail is not empty: '</p>
+<p>1234567
+╔══╤════╗
+║◌◌│◌◌IW║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤◌│T║ 5
+╟─┤◌├─┤◌║ 6
+║◌│◌│◌│◌║ 7
+╚═╧═╧═╧═╝
+ Propongo di iniziare a discutere su come allineare gli oggetti. Qual è la tua strategia?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: Il tuo messaggio non deve contenere nulla dopo il comando!</p>
+<p>Assicurati che la tua risposta contenga solo <code>COMUNICA: &lt;MESSAGE&gt;</code> o <code>SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)</code>, e nient'altro!</p>
+<p>You have collectively accumulated 1 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Ciao, propongo di iniziare a discutere su come allineare gli oggetti. Qual è la tua strategia?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Ciao, propongo di iniziare a discutere su come allineare gli oggetti. Qual è la tua strategia?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌T┌─╢ 2
+║◌◌HW◌│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤◌│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+
+</code></pre>
+<ul>
+<li>Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.</li>
+<li>The following objects are randomly placed on your grid: 'W', 'I', 'T', 'C', 'H'.</li>
+</ul>
+<p>L'altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell'altro giocatore, e loro non possono vedere il tuo.</p>
+<p><strong>Obiettivo:</strong></p>
+<p>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l'altro giocatore per concordare una configurazione obiettivo comune.</p>
+<p><strong>Regole:</strong></p>
+<ul>
+<li>In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:</li>
+<li><code>COMUNICA: &lt;MESSAGE&gt;</code>: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all'altro giocatore. Lo inoltrerò al tuo partner.</li>
+<li><code>SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)</code>: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.</li>
+<li>Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.</li>
+<li>If both players accumulate more than 12 penalties, you both lose the game.</li>
+<li>È vitale che comunichi con l'altro giocatore riguardo al tuo stato obiettivo! L'<em>unico</em> modo in cui puoi trasmettere la tua strategia all'altro giocatore è usando il comando <code>COMUNICA: &lt;MESSAGE&gt;</code>!</li>
+</ul>
+<p><strong>Spostamento Oggetti</strong></p>
+<ul>
+<li>Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo '◌'.</li>
+<li>Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.</li>
+<li>Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!</li>
+</ul>
+<p><strong>Fine del Gioco</strong></p>
+<p>Se pensi di aver raggiunto l'obiettivo di allineare tutti gli oggetti, puoi chiedere all'altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l'altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.</p>
+<p>Both players win if the game ends within 20 rounds, where one round is defined as two players each sending a valid command.</p>
+<p><strong>Punteggio:</strong></p>
+<p>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?</p>
+<p>L'altro giocatore ha iniziato il gioco inviando questo messaggio:</p>
+<p>"Ciao, propongo di iniziare a discutere su come allineare gli oggetti. Qual è la tua strategia?"</p>
+<p>Qual è il tuo primo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>Sembra un gioco interessante!</p>
+<p>Il mio primo comando è:</p>
+<p>COMUNICA: Ciao! Sono d'accordo, dobbiamo discutere una strategia comune. Propongo di iniziare con l'oggetto 'T'. Dove vorresti posizionarlo nel tuo tavolo da gioco? Io ho un'idea di posizionarlo nella colonna 4, ma sono aperto a suggerimenti. Come la vedi?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>Sembra un gioco interessante!</p>
+<p>Il mio primo comando è:</p>
+<p>COMUNICA: Ciao! Sono d'accordo, dobbiamo discutere una strategia comune. Propongo di iniziare con l'oggetto 'T'. Dove vorresti posizionarlo nel tuo tavolo da gioco? Io ho un'idea di posizionarlo nella colonna 4, ma sono aperto a suggerimenti. Come la vedi?</p></p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p><p>Invalid format: head is not empty: 'Sembra un gioco interessante!</p>
+<p>Il mio primo comando è:</p>
+<p>'</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!</p>
+<p>Assicurati che la tua risposta contenga solo <code>COMUNICA: &lt;MESSAGE&gt;</code> o <code>SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)</code>, e nient'altro!</p>
+<p>You have collectively accumulated 2 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Ciao! Sono d'accordo, dobbiamo discutere una strategia comune. Propongo di iniziare con l'oggetto 'T'. Dove vorresti posizionarlo nel tuo tavolo da gioco? Io ho un'idea di posizionarlo nella colonna 4, ma sono aperto a suggerimenti. Come la vedi?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Ciao! Sono d'accordo, dobbiamo discutere una strategia comune. Propongo di iniziare con l'oggetto 'T'. Dove vorresti posizionarlo nel tuo tavolo da gioco? Io ho un'idea di posizionarlo nella colonna 4, ma sono aperto a suggerimenti. Come la vedi?</p></p>
+    </div>
+</div><div class="game-round" data-round="1">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 1 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Ciao! Sono d'accordo, dobbiamo discutere una strategia comune. Propongo di iniziare con l'oggetto 'T'. Dove vorresti posizionarlo nel tuo tavolo da gioco? Io ho un'idea di posizionarlo nella colonna 4, ma sono aperto a suggerimenti. Come la vedi?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Mi sembra una buona idea partire dall'oggetto 'T'. Io posizionerei 'T' nella colonna 5, potresti dirmi qual è la tua griglia iniziale per capire meglio la situazione?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Mi sembra una buona idea partire dall'oggetto 'T'. Io posizionerei 'T' nella colonna 5, potresti dirmi qual è la tua griglia iniziale per capire meglio la situazione?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 2 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Mi sembra una buona idea partire dall'oggetto 'T'. Io posizionerei 'T' nella colonna 5, potresti dirmi qual è la tua griglia iniziale per capire meglio la situazione?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: La mia griglia iniziale è quella con 'T' nella riga 2, 'W' e 'H' nella riga 3, 'I' e 'C' nella riga 7. Potremmo provare a posizionare 'T' nella colonna 5 come hai suggerito, ma dobbiamo anche pensare agli altri oggetti. Che ne dici di 'W' e 'H', dove li posizioneresti?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La mia griglia iniziale è quella con 'T' nella riga 2, 'W' e 'H' nella riga 3, 'I' e 'C' nella riga 7. Potremmo provare a posizionare 'T' nella colonna 5 come hai suggerito, ma dobbiamo anche pensare agli altri oggetti. Che ne dici di 'W' e 'H', dove li posizioneresti?</p></p>
+    </div>
+</div><div class="game-round" data-round="2">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 2 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La mia griglia iniziale è quella con 'T' nella riga 2, 'W' e 'H' nella riga 3, 'I' e 'C' nella riga 7. Potremmo provare a posizionare 'T' nella colonna 5 come hai suggerito, ma dobbiamo anche pensare agli altri oggetti. Che ne dici di 'W' e 'H', dove li posizioneresti?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: La posizione di 'W' e 'H' è importante, propongo di posizionare 'W' nella colonna 2 e 'H' nella colonna 6, per avere un po' di spazio per gli altri oggetti, cosa ne pensi?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La posizione di 'W' e 'H' è importante, propongo di posizionare 'W' nella colonna 2 e 'H' nella colonna 6, per avere un po' di spazio per gli altri oggetti, cosa ne pensi?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 3 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La posizione di 'W' e 'H' è importante, propongo di posizionare 'W' nella colonna 2 e 'H' nella colonna 6, per avere un po' di spazio per gli altri oggetti, cosa ne pensi?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Mi sembra una buona idea, 'W' nella colonna 2 e 'H' nella colonna 6 potrebbe funzionare. Per 'I' e 'C', potremmo provare a posizionarli nella stessa riga, magari nella riga 7, in modo da avere un po' di ordine. Che ne pensi di posizionare 'I' nella colonna 3 e 'C' nella colonna 4?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Mi sembra una buona idea, 'W' nella colonna 2 e 'H' nella colonna 6 potrebbe funzionare. Per 'I' e 'C', potremmo provare a posizionarli nella stessa riga, magari nella riga 7, in modo da avere un po' di ordine. Che ne pensi di posizionare 'I' nella colonna 3 e 'C' nella colonna 4?</p></p>
+    </div>
+</div><div class="game-round" data-round="3">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 3 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Mi sembra una buona idea, 'W' nella colonna 2 e 'H' nella colonna 6 potrebbe funzionare. Per 'I' e 'C', potremmo provare a posizionarli nella stessa riga, magari nella riga 7, in modo da avere un po' di ordine. Che ne pensi di posizionare 'I' nella colonna 3 e 'C' nella colonna 4?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sì, posizionare 'I' e 'C' nella riga 7 potrebbe essere una buona scelta, ma prima di decidere le colonne, vorrei spostare l'oggetto 'T' nella colonna 5 sulla mia griglia per vedere come si adatta, poi potremmo discutere ulteriormente la posizione di 'I' e 'C'.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sì, posizionare 'I' e 'C' nella riga 7 potrebbe essere una buona scelta, ma prima di decidere le colonne, vorrei spostare l'oggetto 'T' nella colonna 5 sulla mia griglia per vedere come si adatta, poi potremmo discutere ulteriormente la posizione di 'I' e 'C'.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 4 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sì, posizionare 'I' e 'C' nella riga 7 potrebbe essere una buona scelta, ma prima di decidere le colonne, vorrei spostare l'oggetto 'T' nella colonna 5 sulla mia griglia per vedere come si adatta, poi potremmo discutere ulteriormente la posizione di 'I' e 'C'."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Va bene, aspetta che tu sposti 'T' nella colonna 5 sulla tua griglia, intanto io posso pensare alla mia strategia per 'I' e 'C'. Una volta che avrai spostato 'T', potremmo confrontare le nostre griglie e decidere le colonne per 'I' e 'C'. Se vuoi, posso anche provare a spostare 'T' nella colonna 5 sulla mia griglia per vedere come si adatta, in modo da avere una visione comune.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Va bene, aspetta che tu sposti 'T' nella colonna 5 sulla tua griglia, intanto io posso pensare alla mia strategia per 'I' e 'C'. Una volta che avrai spostato 'T', potremmo confrontare le nostre griglie e decidere le colonne per 'I' e 'C'. Se vuoi, posso anche provare a spostare 'T' nella colonna 5 sulla mia griglia per vedere come si adatta, in modo da avere una visione comune.</p></p>
+    </div>
+</div><div class="game-round" data-round="4">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 4 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Va bene, aspetta che tu sposti 'T' nella colonna 5 sulla tua griglia, intanto io posso pensare alla mia strategia per 'I' e 'C'. Una volta che avrai spostato 'T', potremmo confrontare le nostre griglie e decidere le colonne per 'I' e 'C'. Se vuoi, posso anche provare a spostare 'T' nella colonna 5 sulla mia griglia per vedere come si adatta, in modo da avere una visione comune."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: T, (5, 5)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: T, (5, 5)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'T' in (5,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌IW║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│◌│◌│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 5 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Adesso che hai spostato 'T' sulla tua griglia, vorrei sapere come si presenta la tua griglia attuale. Potresti descrivermi la posizione degli oggetti 'T', 'W', 'H', 'I' e 'C' sulla tua griglia? In questo modo potrò capire meglio come allineare gli oggetti sulla mia griglia per raggiungere l'obiettivo comune.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Adesso che hai spostato 'T' sulla tua griglia, vorrei sapere come si presenta la tua griglia attuale. Potresti descrivermi la posizione degli oggetti 'T', 'W', 'H', 'I' e 'C' sulla tua griglia? In questo modo potrò capire meglio come allineare gli oggetti sulla mia griglia per raggiungere l'obiettivo comune.</p></p>
+    </div>
+</div><div class="game-round" data-round="5">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Spostato 'T' in (5,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌IW║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│◌│◌│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre>
+<p>You are currently playing round 5 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Adesso che hai spostato 'T' sulla tua griglia, vorrei sapere come si presenta la tua griglia attuale. Potresti descrivermi la posizione degli oggetti 'T', 'W', 'H', 'I' e 'C' sulla tua griglia? In questo modo potrò capire meglio come allineare gli oggetti sulla mia griglia per raggiungere l'obiettivo comune."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: La mia griglia attuale ha 'T' in (5,5), 'I' e 'W' insieme nella riga 1, 'H' in (5,3), 'C' in (2,4), gli altri oggetti non sono ancora stati spostati, sto aspettando la tua conferma per prossimi spostamenti.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La mia griglia attuale ha 'T' in (5,5), 'I' e 'W' insieme nella riga 1, 'H' in (5,3), 'C' in (2,4), gli altri oggetti non sono ancora stati spostati, sto aspettando la tua conferma per prossimi spostamenti.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 6 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La mia griglia attuale ha 'T' in (5,5), 'I' e 'W' insieme nella riga 1, 'H' in (5,3), 'C' in (2,4), gli altri oggetti non sono ancora stati spostati, sto aspettando la tua conferma per prossimi spostamenti."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: La tua griglia sembra interessante, adesso capisco meglio come stai pianificando gli spostamenti. Io vorrei spostare l'oggetto 'T' nella colonna 5 sulla mia griglia, per allinearlo con il tuo. Inoltre, sto pensando di spostare 'W' e 'H' per creare spazio per gli altri oggetti. Potremmo provare a mettere 'W' in (2,3) e 'H' in (6,3) sulla mia griglia, così potremmo avere una disposizione simile. Che ne pensi?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La tua griglia sembra interessante, adesso capisco meglio come stai pianificando gli spostamenti. Io vorrei spostare l'oggetto 'T' nella colonna 5 sulla mia griglia, per allinearlo con il tuo. Inoltre, sto pensando di spostare 'W' e 'H' per creare spazio per gli altri oggetti. Potremmo provare a mettere 'W' in (2,3) e 'H' in (6,3) sulla mia griglia, così potremmo avere una disposizione simile. Che ne pensi?</p></p>
+    </div>
+</div><div class="game-round" data-round="6">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 6 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La tua griglia sembra interessante, adesso capisco meglio come stai pianificando gli spostamenti. Io vorrei spostare l'oggetto 'T' nella colonna 5 sulla mia griglia, per allinearlo con il tuo. Inoltre, sto pensando di spostare 'W' e 'H' per creare spazio per gli altri oggetti. Potremmo provare a mettere 'W' in (2,3) e 'H' in (6,3) sulla mia griglia, così potremmo avere una disposizione simile. Che ne pensi?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sembra una buona idea allineare 'T' e provare a mettere 'W' e 'H' in posizioni simili, la mia griglia ha già 'H' nella colonna 5 della riga 3, quindi potresti adattare la posizione di 'H' di conseguenza, magari in (6,2) per non sovrapporlo al mio, poi potremmo discutere la posizione di 'I' e 'C'.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sembra una buona idea allineare 'T' e provare a mettere 'W' e 'H' in posizioni simili, la mia griglia ha già 'H' nella colonna 5 della riga 3, quindi potresti adattare la posizione di 'H' di conseguenza, magari in (6,2) per non sovrapporlo al mio, poi potremmo discutere la posizione di 'I' e 'C'.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 7 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sembra una buona idea allineare 'T' e provare a mettere 'W' e 'H' in posizioni simili, la mia griglia ha già 'H' nella colonna 5 della riga 3, quindi potresti adattare la posizione di 'H' di conseguenza, magari in (6,2) per non sovrapporlo al mio, poi potremmo discutere la posizione di 'I' e 'C'."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Va bene, capisco la tua idea. Allora, sposterò 'T' in (5,5) sulla mia griglia per allinearci. Poi, potrei spostare 'H' in (6,2) come hai suggerito, in modo da non sovrapporlo al tuo e tenere una struttura coerente. Per 'I' e 'C', potremmo pensare di metterli nella riga 7, magari 'I' in (3,7) e 'C' in (4,7), per avere una certa logica nella disposizione. Che ne pensi di questa idea?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Va bene, capisco la tua idea. Allora, sposterò 'T' in (5,5) sulla mia griglia per allinearci. Poi, potrei spostare 'H' in (6,2) come hai suggerito, in modo da non sovrapporlo al tuo e tenere una struttura coerente. Per 'I' e 'C', potremmo pensare di metterli nella riga 7, magari 'I' in (3,7) e 'C' in (4,7), per avere una certa logica nella disposizione. Che ne pensi di questa idea?</p></p>
+    </div>
+</div><div class="game-round" data-round="7">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 7 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Va bene, capisco la tua idea. Allora, sposterò 'T' in (5,5) sulla mia griglia per allinearci. Poi, potrei spostare 'H' in (6,2) come hai suggerito, in modo da non sovrapporlo al tuo e tenere una struttura coerente. Per 'I' e 'C', potremmo pensare di metterli nella riga 7, magari 'I' in (3,7) e 'C' in (4,7), per avere una certa logica nella disposizione. Che ne pensi di questa idea?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: La tua idea per 'I' e 'C' nella riga 7 sembra ragionevole, ma prima di decidere, vorrei spostare 'I' e 'W' sulla mia griglia per avere una visione più chiara, potremmo poi confrontare le nostre griglie e fare ajustamenti finali.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La tua idea per 'I' e 'C' nella riga 7 sembra ragionevole, ma prima di decidere, vorrei spostare 'I' e 'W' sulla mia griglia per avere una visione più chiara, potremmo poi confrontare le nostre griglie e fare ajustamenti finali.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 8 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La tua idea per 'I' e 'C' nella riga 7 sembra ragionevole, ma prima di decidere, vorrei spostare 'I' e 'W' sulla mia griglia per avere una visione più chiara, potremmo poi confrontare le nostre griglie e fare ajustamenti finali."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Va bene, aspetterò che tu sposti 'I' e 'W' sulla tua griglia. Nel frattempo, potrei iniziare a spostare gli oggetti sulla mia griglia secondo la strategia che abbiamo discusso finora. Una volta che avrai finito di spostare 'I' e 'W', potremmo confrontare le nostre griglie e fare gli ajustamenti finali per raggiungere l'obiettivo comune. Se sei pronto, potrei iniziare a muovere alcuni oggetti sulla mia griglia per allinearli con la tua strategia.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Va bene, aspetterò che tu sposti 'I' e 'W' sulla tua griglia. Nel frattempo, potrei iniziare a spostare gli oggetti sulla mia griglia secondo la strategia che abbiamo discusso finora. Una volta che avrai finito di spostare 'I' e 'W', potremmo confrontare le nostre griglie e fare gli ajustamenti finali per raggiungere l'obiettivo comune. Se sei pronto, potrei iniziare a muovere alcuni oggetti sulla mia griglia per allinearli con la tua strategia.</p></p>
+    </div>
+</div><div class="game-round" data-round="8">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 8 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Va bene, aspetterò che tu sposti 'I' e 'W' sulla tua griglia. Nel frattempo, potrei iniziare a spostare gli oggetti sulla mia griglia secondo la strategia che abbiamo discusso finora. Una volta che avrai finito di spostare 'I' e 'W', potremmo confrontare le nostre griglie e fare gli ajustamenti finali per raggiungere l'obiettivo comune. Se sei pronto, potrei iniziare a muovere alcuni oggetti sulla mia griglia per allinearli con la tua strategia."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: I, (3,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: I, (3,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'I' in (3,7) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌W║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│◌│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 9 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: T, (5, 5)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: T, (5, 5)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'T' in (5,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌HW◌│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="9">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Spostato 'I' in (3,7) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌W║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│◌│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre>
+<p>You are currently playing round 9 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: W, (2,3)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: W, (2,3)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'W' in (2,3) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌W◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│◌│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'T' in (5,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌HW◌│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre>
+<p>You are currently playing round 10 of maximum 20.
+You have collectively accumulated 2 of 12 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: H, (6, 2)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: H, (6, 2)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (6,2) non è vuoto, ma contiene '┌'.</p>
+<p>You have collectively accumulated 3 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Penalità: (6,2) non è vuoto, ma contiene '┌'.</p>
+<p>You have collectively accumulated 3 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: H, (6, 4)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: H, (6, 4)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (6,4) non è vuoto, ma contiene '┼'.</p>
+<p>You have collectively accumulated 4 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Penalità: (6,4) non è vuoto, ma contiene '┼'.</p>
+<p>You have collectively accumulated 4 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: H, (6, 1)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: H, (6, 1)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'H' in (6,1) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌H◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌W◌│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="10">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Spostato 'W' in (2,3) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌W◌◌H│◌║ 3
+╟─┐C┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│◌│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre>
+<p>You are currently playing round 10 of maximum 20.
+You have collectively accumulated 4 of 12 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: C, (4,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: C, (4,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (4,7) non è vuoto, ma contiene '│'.</p>
+<p>You have collectively accumulated 5 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: (4,7) non è vuoto, ma contiene '│'.</p>
+<p>You have collectively accumulated 5 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: C, (4,4)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: C, (4,4)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (4,4) non è vuoto, ma contiene '┌'.</p>
+<p>You have collectively accumulated 6 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: (4,4) non è vuoto, ma contiene '┌'.</p>
+<p>You have collectively accumulated 6 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: C, (2,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: C, (2,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (2,7) non è vuoto, ma contiene '│'.</p>
+<p>You have collectively accumulated 7 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: (2,7) non è vuoto, ma contiene '│'.</p>
+<p>You have collectively accumulated 7 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: C, (4,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: C, (4,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (4,6) non è vuoto, ma contiene '├'.</p>
+<p>You have collectively accumulated 8 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: (4,6) non è vuoto, ma contiene '├'.</p>
+<p>You have collectively accumulated 8 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: C, (6,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: C, (6,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (6,7) non è vuoto, ma contiene '│'.</p>
+<p>You have collectively accumulated 9 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: (6,7) non è vuoto, ma contiene '│'.</p>
+<p>You have collectively accumulated 9 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: C, (5,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: C, (5,7)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'C' in (5,7) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌W◌◌H│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'H' in (6,1) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌H◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌W◌│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre>
+<p>You are currently playing round 11 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sembra che stiamo facendo progressi, ma le penalità stanno aumentando. Vorrei sapere come sta procedendo la tua griglia e se possiamo sincronizzare gli spostamenti per evitare ulteriori penalità. Potresti descrivermi la tua griglia attuale e quali sono i tuoi prossimi passi?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sembra che stiamo facendo progressi, ma le penalità stanno aumentando. Vorrei sapere come sta procedendo la tua griglia e se possiamo sincronizzare gli spostamenti per evitare ulteriori penalità. Potresti descrivermi la tua griglia attuale e quali sono i tuoi prossimi passi?</p></p>
+    </div>
+</div><div class="game-round" data-round="11">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Spostato 'C' in (5,7) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌W◌◌H│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre>
+<p>You are currently playing round 11 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sembra che stiamo facendo progressi, ma le penalità stanno aumentando. Vorrei sapere come sta procedendo la tua griglia e se possiamo sincronizzare gli spostamenti per evitare ulteriori penalità. Potresti descrivermi la tua griglia attuale e quali sono i tuoi prossimi passi?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: La mia griglia attuale è aggiornata con 'T' in (5,5), 'I' in (3,7), 'C' in (5,7), 'W' in (2,3) e 'H' in (5,3), sto valutando il prossimo spostamento per allineare gli oggetti con la tua griglia, possiamo confrontare le nostre strategie per minimizzare le penalità e raggiungere l'obiettivo comune.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La mia griglia attuale è aggiornata con 'T' in (5,5), 'I' in (3,7), 'C' in (5,7), 'W' in (2,3) e 'H' in (5,3), sto valutando il prossimo spostamento per allineare gli oggetti con la tua griglia, possiamo confrontare le nostre strategie per minimizzare le penalità e raggiungere l'obiettivo comune.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 12 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La mia griglia attuale è aggiornata con 'T' in (5,5), 'I' in (3,7), 'C' in (5,7), 'W' in (2,3) e 'H' in (5,3), sto valutando il prossimo spostamento per allineare gli oggetti con la tua griglia, possiamo confrontare le nostre strategie per minimizzare le penalità e raggiungere l'obiettivo comune."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: La tua griglia sembra più organizzata, con 'T', 'I', 'C', 'W' e 'H' posizionati in modo coerente. Io sto cercando di allineare gli oggetti sulla mia griglia con la tua strategia. Propongo di mettere 'I' in (3,7) e 'C' in (4,7) sulla mia griglia, per allinearli con la tua disposizione. Inoltre, potrei spostare 'W' in (2,3) per sincronizzare con la tua griglia. Che ne pensi di questa proposta?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La tua griglia sembra più organizzata, con 'T', 'I', 'C', 'W' e 'H' posizionati in modo coerente. Io sto cercando di allineare gli oggetti sulla mia griglia con la tua strategia. Propongo di mettere 'I' in (3,7) e 'C' in (4,7) sulla mia griglia, per allinearli con la tua disposizione. Inoltre, potrei spostare 'W' in (2,3) per sincronizzare con la tua griglia. Che ne pensi di questa proposta?</p></p>
+    </div>
+</div><div class="game-round" data-round="12">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 12 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La tua griglia sembra più organizzata, con 'T', 'I', 'C', 'W' e 'H' posizionati in modo coerente. Io sto cercando di allineare gli oggetti sulla mia griglia con la tua strategia. Propongo di mettere 'I' in (3,7) e 'C' in (4,7) sulla mia griglia, per allinearli con la tua disposizione. Inoltre, potrei spostare 'W' in (2,3) per sincronizzare con la tua griglia. Che ne pensi di questa proposta?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: La tua proposta sembra ragionevole, allineare 'I' e 'C' con la mia griglia potrebbe funzionare, e spostare 'W' in (2,3) sulla tua griglia sincronizzerà bene con la mia, ora che abbiamo 'I', 'C' e 'W' allineati, potremmo focalizzarci su 'T' e 'H' per completare l'allineamento, come stanno 'T' e 'H' sulla tua griglia?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La tua proposta sembra ragionevole, allineare 'I' e 'C' con la mia griglia potrebbe funzionare, e spostare 'W' in (2,3) sulla tua griglia sincronizzerà bene con la mia, ora che abbiamo 'I', 'C' e 'W' allineati, potremmo focalizzarci su 'T' e 'H' per completare l'allineamento, come stanno 'T' e 'H' sulla tua griglia?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 13 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La tua proposta sembra ragionevole, allineare 'I' e 'C' con la mia griglia potrebbe funzionare, e spostare 'W' in (2,3) sulla tua griglia sincronizzerà bene con la mia, ora che abbiamo 'I', 'C' e 'W' allineati, potremmo focalizzarci su 'T' e 'H' per completare l'allineamento, come stanno 'T' e 'H' sulla tua griglia?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: 'T' è già stato spostato in (5,5) sulla mia griglia, quindi è allineato con la tua posizione. Per 'H', l'ho spostato in (6,1) sulla mia griglia, ma sulla tua griglia 'H' è in (5,3), quindi ci sarà bisogno di un aggiustamento per allinearli. Potremmo discutere come spostare 'H' sulla mia griglia per allinearla con la tua posizione. Forse potrei spostarlo in (5,3) sulla mia griglia, ma dobbiamo considerare le posizioni degli altri oggetti per evitare conflitti. Che ne pensi?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: 'T' è già stato spostato in (5,5) sulla mia griglia, quindi è allineato con la tua posizione. Per 'H', l'ho spostato in (6,1) sulla mia griglia, ma sulla tua griglia 'H' è in (5,3), quindi ci sarà bisogno di un aggiustamento per allinearli. Potremmo discutere come spostare 'H' sulla mia griglia per allinearla con la tua posizione. Forse potrei spostarlo in (5,3) sulla mia griglia, ma dobbiamo considerare le posizioni degli altri oggetti per evitare conflitti. Che ne pensi?</p></p>
+    </div>
+</div><div class="game-round" data-round="13">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 13 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"'T' è già stato spostato in (5,5) sulla mia griglia, quindi è allineato con la tua posizione. Per 'H', l'ho spostato in (6,1) sulla mia griglia, ma sulla tua griglia 'H' è in (5,3), quindi ci sarà bisogno di un aggiustamento per allinearli. Potremmo discutere come spostare 'H' sulla mia griglia per allinearla con la tua posizione. Forse potrei spostarlo in (5,3) sulla mia griglia, ma dobbiamo considerare le posizioni degli altri oggetti per evitare conflitti. Che ne pensi?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Spostare 'H' in (5,3) sulla tua griglia sembra la scelta più ovvia per allinearla con la mia posizione, ma come hai detto, dobbiamo considerare gli altri oggetti per evitare conflitti, sulla mia griglia non ci sono oggetti in (5,3) oltre a 'H', quindi se sulla tua griglia non ci sono oggetti in conflitto, potresti spostare 'H' in (5,3) e poi potremmo valutare se ci sono altri aggiustamenti necessari per raggiungere l'allineamento completo degli oggetti.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Spostare 'H' in (5,3) sulla tua griglia sembra la scelta più ovvia per allinearla con la mia posizione, ma come hai detto, dobbiamo considerare gli altri oggetti per evitare conflitti, sulla mia griglia non ci sono oggetti in (5,3) oltre a 'H', quindi se sulla tua griglia non ci sono oggetti in conflitto, potresti spostare 'H' in (5,3) e poi potremmo valutare se ci sono altri aggiustamenti necessari per raggiungere l'allineamento completo degli oggetti.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 14 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Spostare 'H' in (5,3) sulla tua griglia sembra la scelta più ovvia per allinearla con la mia posizione, ma come hai detto, dobbiamo considerare gli altri oggetti per evitare conflitti, sulla mia griglia non ci sono oggetti in (5,3) oltre a 'H', quindi se sulla tua griglia non ci sono oggetti in conflitto, potresti spostare 'H' in (5,3) e poi potremmo valutare se ci sono altri aggiustamenti necessari per raggiungere l'allineamento completo degli oggetti."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: H, (5, 3)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: H, (5, 3)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'H' in (5,3) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌WH│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="14">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 14 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Adesso che abbiamo discusso gli spostamenti e allineato la maggior parte degli oggetti, potremmo fare un'ultima verifica delle nostre griglie per assicurarci che tutto sia allineato correttamente, poi potremmo considerare di concludere il gioco se tutto sembra corretto, cosa ne pensi di proporre di finire il gioco se le nostre griglie sono allineate?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Adesso che abbiamo discusso gli spostamenti e allineato la maggior parte degli oggetti, potremmo fare un'ultima verifica delle nostre griglie per assicurarci che tutto sia allineato correttamente, poi potremmo considerare di concludere il gioco se tutto sembra corretto, cosa ne pensi di proporre di finire il gioco se le nostre griglie sono allineate?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'H' in (5,3) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌◌◌WH│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre>
+<p>You are currently playing round 15 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Adesso che abbiamo discusso gli spostamenti e allineato la maggior parte degli oggetti, potremmo fare un'ultima verifica delle nostre griglie per assicurarci che tutto sia allineato correttamente, poi potremmo considerare di concludere il gioco se tutto sembra corretto, cosa ne pensi di proporre di finire il gioco se le nostre griglie sono allineate?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo, fare un'ultima verifica delle nostre griglie è una buona idea. Se tutto è allineato correttamente, possiamo considerare di concludere il gioco. Tuttavia, prima di farlo, vorrei assicurarmi che 'I' e 'C' siano nelle posizioni corrette sulla mia griglia. Propongo di spostare 'I' in (3,7) e 'C' in (5,7) sulla mia griglia per allinearli con la tua. Se dopo questo spostamento tutto sembra corretto, potremmo considerare di finire il gioco. Che ne pensi?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo, fare un'ultima verifica delle nostre griglie è una buona idea. Se tutto è allineato correttamente, possiamo considerare di concludere il gioco. Tuttavia, prima di farlo, vorrei assicurarmi che 'I' e 'C' siano nelle posizioni corrette sulla mia griglia. Propongo di spostare 'I' in (3,7) e 'C' in (5,7) sulla mia griglia per allinearli con la tua. Se dopo questo spostamento tutto sembra corretto, potremmo considerare di finire il gioco. Che ne pensi?</p></p>
+    </div>
+</div><div class="game-round" data-round="15">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 15 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo, fare un'ultima verifica delle nostre griglie è una buona idea. Se tutto è allineato correttamente, possiamo considerare di concludere il gioco. Tuttavia, prima di farlo, vorrei assicurarmi che 'I' e 'C' siano nelle posizioni corrette sulla mia griglia. Propongo di spostare 'I' in (3,7) e 'C' in (5,7) sulla mia griglia per allinearli con la tua. Se dopo questo spostamento tutto sembra corretto, potremmo considerare di finire il gioco. Che ne pensi?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sì, sono d'accordo, spostare 'I' in (3,7) e 'C' in (5,7) sulla tua griglia li allineerà con la mia, se dopo questo spostamento tutto sembra corretto, possiamo considerare di finire il gioco, se sei pronto, potresti inviare un messaggio di conferma per finire il gioco una volta che avrai fatto gli spostamenti, io risponderò con un messaggio di conferma per completare la procedura di fine gioco.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sì, sono d'accordo, spostare 'I' in (3,7) e 'C' in (5,7) sulla tua griglia li allineerà con la mia, se dopo questo spostamento tutto sembra corretto, possiamo considerare di finire il gioco, se sei pronto, potresti inviare un messaggio di conferma per finire il gioco una volta che avrai fatto gli spostamenti, io risponderò con un messaggio di conferma per completare la procedura di fine gioco.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 16 of maximum 20.
+You have collectively accumulated 9 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sì, sono d'accordo, spostare 'I' in (3,7) e 'C' in (5,7) sulla tua griglia li allineerà con la mia, se dopo questo spostamento tutto sembra corretto, possiamo considerare di finire il gioco, se sei pronto, potresti inviare un messaggio di conferma per finire il gioco una volta che avrai fatto gli spostamenti, io risponderò con un messaggio di conferma per completare la procedura di fine gioco."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: I, (3, 7)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: I, (3, 7)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (3,7) non è vuoto, ma contiene 'I'.</p>
+<p>You have collectively accumulated 10 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Penalità: (3,7) non è vuoto, ma contiene 'I'.</p>
+<p>You have collectively accumulated 10 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: C, (5, 7)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: C, (5, 7)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (5,7) non è vuoto, ma contiene 'C'.</p>
+<p>You have collectively accumulated 11 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Penalità: (5,7) non è vuoto, ma contiene 'C'.</p>
+<p>You have collectively accumulated 11 of 12 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: W, (2, 3)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: W, (2, 3)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'W' in (2,3) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌W◌◌H│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="16">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 16 of maximum 20.
+You have collectively accumulated 11 of 12 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: finito?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: finito?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'W' in (2,3) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔══╤════╗
+║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2
+║◌W◌◌H│◌║ 3
+╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝
+</code></pre>
+<p>You are currently playing round 17 of maximum 20.
+You have collectively accumulated 11 of 12 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"finito?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: finito!</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: finito!</p></p>
+    </div>
+
+    <div speaker="Game Master: success" class="msg gm-gm" style="">
+        <p><p>true</p></p>
+    </div>
+
+    <div speaker="Game Master: game_finished" class="msg gm-gm" style="">
+        <p><ul>
+<li>success: True</li>
+<li>lose: False</li>
+<li>aborted: False</li>
+</ul>
+<hr />
+<ul>
+<li>Shifts: 7.00</li>
+<li>Max Shifts: 8.00</li>
+<li>Min Shifts: 4.00</li>
+<li>End Distance Sum: 0.00</li>
+<li>Init Distance Sum: 19.52</li>
+<li>Expected Distance Sum: 20.95</li>
+<li>Penalties: 11.00</li>
+<li>Max Penalties: 12.00</li>
+<li>Rounds: 17.00</li>
+<li>Max Rounds: 20.00</li>
+<li>Object Count: 5.00</li>
+</ul></p>
+    </div>
+
+    <div speaker="Game Master: grid logs" class="msg gm-gm" style="">
+        <p><p>Initial Grids:</p>
+<pre><code>Player 1:     Player 2:
+ 1234567       1234567
+╔══╤════╗     ╔══╤════╗
+║◌◌│◌◌IW║ 1   ║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2   ╟──┘◌T┌─╢ 2
+║◌◌◌◌H│◌║ 3   ║◌◌HW◌│◌║ 3
+╟─┐C┌─┼─╢ 4   ╟─┐◌┌─┼─╢ 4
+║◌├─┤◌│T║ 5   ║◌├─┤◌│◌║ 5
+╟─┤◌├─┤◌║ 6   ╟─┤◌├─┤◌║ 6
+║◌│◌│◌│◌║ 7   ║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝     ╚═╧═╧═╧═╝
+</code></pre>
+<p>Final Grids:</p>
+<pre><code>Player 1:     Player 2:
+ 1234567       1234567
+╔══╤════╗     ╔══╤════╗
+║◌◌│◌◌◌◌║ 1   ║◌◌│◌◌◌◌║ 1
+╟──┘◌◌┌─╢ 2   ╟──┘◌◌┌─╢ 2
+║◌W◌◌H│◌║ 3   ║◌W◌◌H│◌║ 3
+╟─┐◌┌─┼─╢ 4   ╟─┐◌┌─┼─╢ 4
+║◌├─┤T│◌║ 5   ║◌├─┤T│◌║ 5
+╟─┤◌├─┤◌║ 6   ╟─┤◌├─┤◌║ 6
+║◌│I│C│◌║ 7   ║◌│I│C│◌║ 7
+╚═╧═╧═╧═╝     ╚═╧═╧═╧═╝
+</code></pre></p>
+    </div>
+</div>
+</div>
+
+</body>
+</html>

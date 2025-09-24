@@ -1,0 +1,1840 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+    <style>
+        /* This CSS is based on a stack overflow answer by Roko C. Buljan in https://stackoverflow.com/a/71155446 */ 
+
+* {margin: 0; box-sizing: border-box;}
+
+body {
+  background-color: rgb(157, 152, 150);
+}
+
+.top-info {
+	text-align: center;
+	font: 1.25rem/1.5 sans-serif;
+	display: flex;
+	flex-direction: column;
+	padding: 1.25em;
+	width: 80%;
+  max-width: 1200px;
+	margin: auto;
+	background: #3f3e3e;
+	color: #fff;
+}
+
+.chat {
+  --rad: 1.5rem;
+  --rad-sm: .3rem;
+  font: 1rem/1.5 sans-serif;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  width: 80%;
+  max-width: 1200px;
+  margin: auto;
+  background: #fff;
+}
+
+.msg {
+  position: relative;
+  padding: .6rem 1.2rem;
+  margin-inline: 1rem;
+  margin-block: 2rem;
+}
+
+.game-round {
+  padding: 1.5rem 0 1.5rem 0;
+  background-color: #f0f8ff; /* light background for content */
+  position: relative; /* Important to position the badge */
+  border-radius: 1rem;
+  margin: 1rem;
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1);
+}
+
+/* Badge in top-right corner */
+.game-round::before {
+  content: "Round " attr(data-round);
+  position: absolute;
+  top: .35rem;
+  right: 1.5rem;
+  color: #c4c3c3;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+/* For fenced code/monospace blocks */
+pre {
+  background: #e0e0e0;
+  border-left: .2rem solid #f36d33;
+  border-radius: .2rem;
+  color: #666;
+  font-family: monospace;
+  line-height: 1.0;
+  margin-top: 0.3rem;
+  margin-bottom: 0.5rem;
+  max-width: 100%;
+  overflow: auto;
+  padding: 0.5rem 0.2rem;
+}/* This CSS is based on a stack overflow answer by Roko C. Buljan in https://stackoverflow.com/a/71155446 */
+
+.msg.player-gm.p1, .msg.player-player.p1 {
+  border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+  margin-right: 40%;
+}
+
+.msg.player-player {
+  opacity: 0.9;
+  font-size: 0.75rem;
+}
+
+.p1 {
+  background: #f39109;
+  color: #fff;
+}
+
+.p2 {
+  background: #874aaf;
+  color: #fff;
+}
+
+.msg.player-gm.p2, .msg.player-player.p2 {
+  border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+  margin-left: 40%;
+}
+.msg.player-gm::before {
+  right: 1rem;
+}
+
+.msg.gm-player {
+  background: #c4c3c3;
+  color: #0c0c0c;
+}
+
+.msg.gm-player.p1 {
+  border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad);
+  margin-right: 20%;
+  margin-left: 10%;
+}
+
+.msg.gm-player.p2 {
+  border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm);
+  margin-right: 10%;
+  margin-left: 20%;
+}
+
+.msg.gm-gm {
+  border-radius: var(--rad-sm) var(--rad-sm) var(--rad-sm) var(--rad-sm);
+  background: #f1f1f1;
+  color: #373636;
+  margin-left: 20%;
+  margin-right: 20%;
+  font-size: 0.8rem;
+
+}
+
+/* speaker labels */
+
+.msg::before {
+  content: attr(speaker);
+  font-size: 0.8rem;
+  position: absolute;
+  bottom: 100%;
+  color: #888;
+  white-space: nowrap;
+
+}
+
+/* Message info displayed on the right for GM to Player 1 */
+.msg.gm-player.a::before {
+  right: 1rem;
+}
+
+/* All other cases: message info on the left */
+.msg.player-gm.a::before, .msg.gm-player.b::before, .msg.gm-gm::before {
+  left: 1rem;
+}
+    </style>
+</head>
+<body>
+
+<br/>
+
+<div class="top-info">
+    <p>Interaction Transcript for game 'clean_up', experiment '1_medium_7obj_en', episode 2 with llama-3.3-70b-instruct-t1.0.</p>
+</div>
+
+<br/>
+
+<div class="chat">
+<div class="game-round" data-round="0">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌S◌║ 4
+║◌◌◌◌◌┌─╢ 5
+║◌◌◌PT│O║ 6
+║◌D◌◌◌│◌║ 7
+╚═════╧═╝
+
+</code></pre>
+<ul>
+<li>Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.</li>
+<li>The following objects are randomly placed on your grid: 'P', 'O', 'T', 'S', 'D', 'A', 'M'.</li>
+</ul>
+<p>L'altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell'altro giocatore, e loro non possono vedere il tuo.</p>
+<p><strong>Obiettivo:</strong></p>
+<p>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l'altro giocatore per concordare una configurazione obiettivo comune.</p>
+<p><strong>Regole:</strong></p>
+<ul>
+<li>In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:</li>
+<li><code>COMUNICA: &lt;MESSAGE&gt;</code>: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all'altro giocatore. Lo inoltrerò al tuo partner.</li>
+<li><code>SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)</code>: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.</li>
+<li>Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.</li>
+<li>If both players accumulate more than 16 penalties, you both lose the game.</li>
+<li>È vitale che comunichi con l'altro giocatore riguardo al tuo stato obiettivo! L'<em>unico</em> modo in cui puoi trasmettere la tua strategia all'altro giocatore è usando il comando <code>COMUNICA: &lt;MESSAGE&gt;</code>!</li>
+</ul>
+<p><strong>Spostamento Oggetti</strong></p>
+<ul>
+<li>Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo '◌'.</li>
+<li>Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.</li>
+<li>Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!</li>
+</ul>
+<p><strong>Fine del Gioco</strong></p>
+<p>Se pensi di aver raggiunto l'obiettivo di allineare tutti gli oggetti, puoi chiedere all'altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l'altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.</p>
+<p>Both players win if the game ends within 28 rounds, where one round is defined as two players each sending a valid command.</p>
+<p><strong>Punteggio:</strong></p>
+<p>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?</p>
+<p>Per favore invia un messaggio all'altro giocatore per iniziare il gioco!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>Sembra un gioco molto interessante e sfidante! Per iniziare, vorrei proporre una strategia per raggiungere l'obiettivo comune.</p>
+<p>COMUNICA: Ciao! Propongo di iniziare a condividere le posizioni degli oggetti sui nostri tavoli da gioco, in modo da poter identificare le differenze e trovare una configurazione obiettivo comune. Potremmo iniziare con l'oggetto 'P'. Qual è la posizione dell'oggetto 'P' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>Sembra un gioco molto interessante e sfidante! Per iniziare, vorrei proporre una strategia per raggiungere l'obiettivo comune.</p>
+<p>COMUNICA: Ciao! Propongo di iniziare a condividere le posizioni degli oggetti sui nostri tavoli da gioco, in modo da poter identificare le differenze e trovare una configurazione obiettivo comune. Potremmo iniziare con l'oggetto 'P'. Qual è la posizione dell'oggetto 'P' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: parse_error" class="msg gm-gm" style="">
+        <p><p>Invalid format: head is not empty: 'Sembra un gioco molto interessante e sfidante! Per iniziare, vorrei proporre una strategia per raggiungere l'obiettivo comune.</p>
+<p>'</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: Il tuo messaggio non deve contenere nulla prima del comando!</p>
+<p>Assicurati che la tua risposta contenga solo <code>COMUNICA: &lt;MESSAGE&gt;</code> o <code>SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)</code>, e nient'altro!</p>
+<p>You have collectively accumulated 1 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Ciao! Propongo di iniziare a condividere le posizioni degli oggetti sui nostri tavoli da gioco, in modo da poter identificare le differenze e trovare una configurazione obiettivo comune. Potremmo iniziare con l'oggetto 'P'. Qual è la posizione dell'oggetto 'P' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Ciao! Propongo di iniziare a condividere le posizioni degli oggetti sui nostri tavoli da gioco, in modo da poter identificare le differenze e trovare una configurazione obiettivo comune. Potremmo iniziare con l'oggetto 'P'. Qual è la posizione dell'oggetto 'P' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Sono il tuo game master, e stai giocando un gioco collaborativo con la seguente griglia come tavolo da gioco:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║O◌◌◌◌┌─╢ 5
+║◌D◌◌A│S║ 6
+║◌◌◌◌T│◌║ 7
+╚═════╧═╝
+
+</code></pre>
+<ul>
+<li>Il bordo superiore mostra le coordinate x che aumentano verso destra, e il bordo destro le coordinate y che aumentano verso il basso.</li>
+<li>The following objects are randomly placed on your grid: 'P', 'O', 'T', 'S', 'D', 'A', 'M'.</li>
+</ul>
+<p>L'altro giocatore vede una variante del tavolo da gioco, dove gli oggetti sono posizionati in diverse posizioni casuali. Non puoi vedere il tavolo dell'altro giocatore, e loro non possono vedere il tuo.</p>
+<p><strong>Obiettivo:</strong></p>
+<p>Entrambi i giocatori devono spostare gli oggetti sui rispettivi sfondi in modo che oggetti identici finiscano alle stesse coordinate. Devi comunicare con l'altro giocatore per concordare una configurazione obiettivo comune.</p>
+<p><strong>Regole:</strong></p>
+<ul>
+<li>In ogni turno, puoi inviare esattamente uno dei seguenti due comandi:</li>
+<li><code>COMUNICA: &lt;MESSAGE&gt;</code>: per inviare un messaggio (tutto fino alla prossima interruzione di riga) all'altro giocatore. Lo inoltrerò al tuo partner.</li>
+<li><code>SPOSTA: &lt;OBJECT&gt;, (&lt;X&gt;, &lt;Y&gt;)</code>: per spostare un oggetto in una nuova posizione, dove &lt;X&gt; è la colonna e &lt;Y&gt; è la riga. Ti farò sapere se la tua mossa è andata a buon fine o no.</li>
+<li>Se non rispetti il formato, o invii diversi comandi contemporaneamente, devo penalizzarti.</li>
+<li>If both players accumulate more than 16 penalties, you both lose the game.</li>
+<li>È vitale che comunichi con l'altro giocatore riguardo al tuo stato obiettivo! L'<em>unico</em> modo in cui puoi trasmettere la tua strategia all'altro giocatore è usando il comando <code>COMUNICA: &lt;MESSAGE&gt;</code>!</li>
+</ul>
+<p><strong>Spostamento Oggetti</strong></p>
+<ul>
+<li>Puoi spostare oggetti solo in celle entro i limiti della griglia. La cella di destinazione deve essere vuota, cioè deve contenere solo il simbolo '◌'.</li>
+<li>Se provi a spostare un oggetto in un posto che non è vuoto, o provi a spostarlo fuori dalla griglia, devo penalizzarti. Hai un altro tentativo.</li>
+<li>Prima di fare una mossa, controlla due volte che il posto di destinazione sia vuoto, e non contenga alcuna lettera, cornice, o linea!</li>
+</ul>
+<p><strong>Fine del Gioco</strong></p>
+<p>Se pensi di aver raggiunto l'obiettivo di allineare tutti gli oggetti, puoi chiedere all'altro giocatore di finire il gioco inviando COMUNICA: finito?. Se l'altro giocatore ti chiede di finire il gioco, e rispondi con COMUNICA: finito!, the game will end.</p>
+<p>Both players win if the game ends within 28 rounds, where one round is defined as two players each sending a valid command.</p>
+<p><strong>Punteggio:</strong></p>
+<p>Più vicini sono gli oggetti identici in entrambi i tavoli da gioco, più punti ottieni. Le penalità riducono i tuoi punti. Riesci a battere il record?</p>
+<p>L'altro giocatore ha iniziato il gioco inviando questo messaggio:</p>
+<p>"Ciao! Propongo di iniziare a condividere le posizioni degli oggetti sui nostri tavoli da gioco, in modo da poter identificare le differenze e trovare una configurazione obiettivo comune. Potremmo iniziare con l'oggetto 'P'. Qual è la posizione dell'oggetto 'P' sul tuo tavolo da gioco?"</p>
+<p>Qual è il tuo primo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Ciao! Sono d'accordo con la tua proposta. L'oggetto 'P' sul mio tavolo da gioco si trova nella posizione (4,4)._qual è la posizione dell' oggetto "P" nel tuo?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Ciao! Sono d'accordo con la tua proposta. L'oggetto 'P' sul mio tavolo da gioco si trova nella posizione (4,4)._qual è la posizione dell' oggetto "P" nel tuo?</p></p>
+    </div>
+</div><div class="game-round" data-round="1">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 1 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Ciao! Sono d'accordo con la tua proposta. L'oggetto 'P' sul mio tavolo da gioco si trova nella posizione (4,4)._qual è la posizione dell' oggetto "P" nel tuo?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Il mio oggetto 'P' si trova nella posizione (5,6). Qual è la posizione dell'oggetto 'O' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Il mio oggetto 'P' si trova nella posizione (5,6). Qual è la posizione dell'oggetto 'O' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 2 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Il mio oggetto 'P' si trova nella posizione (5,6). Qual è la posizione dell'oggetto 'O' sul tuo tavolo da gioco?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Il mio oggetto 'O' si trova nella posizione (1,5). Qual è la posizione dell'oggetto 'T' nel tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Il mio oggetto 'O' si trova nella posizione (1,5). Qual è la posizione dell'oggetto 'T' nel tuo tavolo da gioco?</p></p>
+    </div>
+</div><div class="game-round" data-round="2">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 2 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Il mio oggetto 'O' si trova nella posizione (1,5). Qual è la posizione dell'oggetto 'T' nel tuo tavolo da gioco?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Il mio oggetto 'T' si trova nella posizione (5,6), vicino all'oggetto 'P'. Qual è la posizione dell'oggetto 'S' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Il mio oggetto 'T' si trova nella posizione (5,6), vicino all'oggetto 'P'. Qual è la posizione dell'oggetto 'S' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 3 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Il mio oggetto 'T' si trova nella posizione (5,6), vicino all'oggetto 'P'. Qual è la posizione dell'oggetto 'S' sul tuo tavolo da gioco?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Il mio oggetto 'S' si trova nella posizione (6,6). Nota che il mio oggetto 'T' non è vicino all'oggetto 'P', quindi potrebbe essere una differenza importante. Qual è la posizione dell'oggetto 'D' nel tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Il mio oggetto 'S' si trova nella posizione (6,6). Nota che il mio oggetto 'T' non è vicino all'oggetto 'P', quindi potrebbe essere una differenza importante. Qual è la posizione dell'oggetto 'D' nel tuo tavolo da gioco?</p></p>
+    </div>
+</div><div class="game-round" data-round="3">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 3 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Il mio oggetto 'S' si trova nella posizione (6,6). Nota che il mio oggetto 'T' non è vicino all'oggetto 'P', quindi potrebbe essere una differenza importante. Qual è la posizione dell'oggetto 'D' nel tuo tavolo da gioco?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Il mio oggetto 'D' si trova nella posizione (2,7). Interessante notare la differenza nella posizione dell'oggetto 'T', potrebbe essere un punto di partenza per allineare gli oggetti. Qual è la posizione dell'oggetto 'A' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Il mio oggetto 'D' si trova nella posizione (2,7). Interessante notare la differenza nella posizione dell'oggetto 'T', potrebbe essere un punto di partenza per allineare gli oggetti. Qual è la posizione dell'oggetto 'A' sul tuo tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 4 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Il mio oggetto 'D' si trova nella posizione (2,7). Interessante notare la differenza nella posizione dell'oggetto 'T', potrebbe essere un punto di partenza per allineare gli oggetti. Qual è la posizione dell'oggetto 'A' sul tuo tavolo da gioco?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Il mio oggetto 'A' si trova nella posizione (6,6), vicino all'oggetto 'S'. Sì, la differenza nella posizione dell'oggetto 'T' potrebbe essere un buon punto di partenza per allineare gli oggetti. Propongo di concentrarci su allineare gli oggetti 'T' e 'P' per prima cosa. Qual è la tua strategia per allineare questi oggetti?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Il mio oggetto 'A' si trova nella posizione (6,6), vicino all'oggetto 'S'. Sì, la differenza nella posizione dell'oggetto 'T' potrebbe essere un buon punto di partenza per allineare gli oggetti. Propongo di concentrarci su allineare gli oggetti 'T' e 'P' per prima cosa. Qual è la tua strategia per allineare questi oggetti?</p></p>
+    </div>
+</div><div class="game-round" data-round="4">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 4 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Il mio oggetto 'A' si trova nella posizione (6,6), vicino all'oggetto 'S'. Sì, la differenza nella posizione dell'oggetto 'T' potrebbe essere un buon punto di partenza per allineare gli oggetti. Propongo di concentrarci su allineare gli oggetti 'T' e 'P' per prima cosa. Qual è la tua strategia per allineare questi oggetti?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con la tua proposta di concentrarci sugli oggetti 'T' e 'P'. Propongo di spostare il mio oggetto 'T' vicino al mio oggetto 'P' nella posizione (5,6), e poi discutere come allineare gli oggetti 'T' e 'P' sui nostri rispettivi tavoli da gioco. Qual è la tua opinione su questo piano?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con la tua proposta di concentrarci sugli oggetti 'T' e 'P'. Propongo di spostare il mio oggetto 'T' vicino al mio oggetto 'P' nella posizione (5,6), e poi discutere come allineare gli oggetti 'T' e 'P' sui nostri rispettivi tavoli da gioco. Qual è la tua opinione su questo piano?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 5 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con la tua proposta di concentrarci sugli oggetti 'T' e 'P'. Propongo di spostare il mio oggetto 'T' vicino al mio oggetto 'P' nella posizione (5,6), e poi discutere come allineare gli oggetti 'T' e 'P' sui nostri rispettivi tavoli da gioco. Qual è la tua opinione su questo piano?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con il tuo piano di spostare il tuo oggetto 'T' vicino al tuo oggetto 'P'. Tuttavia, prima di procedere, vorrei sapere la posizione del tuo oggetto 'M'. Potrebbe essere utile conoscere la posizione di tutti gli oggetti per evitare conflitti durante gli spostamenti. Qual è la posizione del tuo oggetto 'M'?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con il tuo piano di spostare il tuo oggetto 'T' vicino al tuo oggetto 'P'. Tuttavia, prima di procedere, vorrei sapere la posizione del tuo oggetto 'M'. Potrebbe essere utile conoscere la posizione di tutti gli oggetti per evitare conflitti durante gli spostamenti. Qual è la posizione del tuo oggetto 'M'?</p></p>
+    </div>
+</div><div class="game-round" data-round="5">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 5 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con il tuo piano di spostare il tuo oggetto 'T' vicino al tuo oggetto 'P'. Tuttavia, prima di procedere, vorrei sapere la posizione del tuo oggetto 'M'. Potrebbe essere utile conoscere la posizione di tutti gli oggetti per evitare conflitti durante gli spostamenti. Qual è la posizione del tuo oggetto 'M'?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Il mio oggetto 'M' si trova nella posizione (3,3). Ora che abbiamo condiviso le posizioni di tutti gli oggetti, possiamo procedere con il piano di allineare gli oggetti 'T' e 'P'. Propongo di effettuare gli spostamenti necessari per allineare questi oggetti e poi verificare se le posizioni degli altri oggetti sono coerenti. Sei pronto a procedere con gli spostamenti?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Il mio oggetto 'M' si trova nella posizione (3,3). Ora che abbiamo condiviso le posizioni di tutti gli oggetti, possiamo procedere con il piano di allineare gli oggetti 'T' e 'P'. Propongo di effettuare gli spostamenti necessari per allineare questi oggetti e poi verificare se le posizioni degli altri oggetti sono coerenti. Sei pronto a procedere con gli spostamenti?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 6 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Il mio oggetto 'M' si trova nella posizione (3,3). Ora che abbiamo condiviso le posizioni di tutti gli oggetti, possiamo procedere con il piano di allineare gli oggetti 'T' e 'P'. Propongo di effettuare gli spostamenti necessari per allineare questi oggetti e poi verificare se le posizioni degli altri oggetti sono coerenti. Sei pronto a procedere con gli spostamenti?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sì, sono pronto a procedere con gli spostamenti. Tuttavia, prima di iniziare, vorrei confermare di avere capito correttamente le posizioni degli oggetti sul tuo tavolo da gioco. Per favore, conferma se le seguenti posizioni sono corrette: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' ?, 'D' in (2,7), 'S' ?, 'A' ?. Inoltre, vorrei sapere quale posizione intendi assegnare agli oggetti 'T' e 'P' per allinearli. Qual è la posizione target per questi oggetti?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sì, sono pronto a procedere con gli spostamenti. Tuttavia, prima di iniziare, vorrei confermare di avere capito correttamente le posizioni degli oggetti sul tuo tavolo da gioco. Per favore, conferma se le seguenti posizioni sono corrette: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' ?, 'D' in (2,7), 'S' ?, 'A' ?. Inoltre, vorrei sapere quale posizione intendi assegnare agli oggetti 'T' e 'P' per allinearli. Qual è la posizione target per questi oggetti?</p></p>
+    </div>
+</div><div class="game-round" data-round="6">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 6 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sì, sono pronto a procedere con gli spostamenti. Tuttavia, prima di iniziare, vorrei confermare di avere capito correttamente le posizioni degli oggetti sul tuo tavolo da gioco. Per favore, conferma se le seguenti posizioni sono corrette: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' ?, 'D' in (2,7), 'S' ?, 'A' ?. Inoltre, vorrei sapere quale posizione intendi assegnare agli oggetti 'T' e 'P' per allinearli. Qual è la posizione target per questi oggetti?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sì, le posizioni che hai elencato sono corrette: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' in (6,6) non è corretta, il mio 'O' è in (6,6) non è corretto, il mio 'O' è in (6,6) è sbagliato, il mio oggetto 'O' è nella posizione (6,6) del tuo messaggio precedente, ma nel mio tavolo da gioco 'O' è nella posizione (6,6) no, la mia risposta precedente era diversa, il mio oggetto 'O' si trova nella posizione (6,6) no... mio oggetto 'O' si trova nella posizione  (non era stato riferito il minha posizione precedente, perche non mi ricordo della posizione iniziale)...mio oggetto 'O' si trova nella posizione in (6,6), 'D' in (2,7), 'S' non è stato riferito da me ma da te che si trova nella posizione (6,6) vicino all'oggetto 'A'... mio oggetto 'S' si trova nella posizione (4,3), 'A' non è stato riferito da me...mio oggetto 'A' si trova nella posizione (4,1). Per allineare gli oggetti 'T' e 'P', propongo di spostare il mio oggetto 'T' in una posizione vicina al mio oggetto 'P', ad esempio, posizione (4,6) o (5,5) non è una scelta...  propongo di spostarlo in (4,6). Qual è la tua opinione su questa scelta?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sì, le posizioni che hai elencato sono corrette: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' in (6,6) non è corretta, il mio 'O' è in (6,6) non è corretto, il mio 'O' è in (6,6) è sbagliato, il mio oggetto 'O' è nella posizione (6,6) del tuo messaggio precedente, ma nel mio tavolo da gioco 'O' è nella posizione (6,6) no, la mia risposta precedente era diversa, il mio oggetto 'O' si trova nella posizione (6,6) no... mio oggetto 'O' si trova nella posizione  (non era stato riferito il minha posizione precedente, perche non mi ricordo della posizione iniziale)...mio oggetto 'O' si trova nella posizione in (6,6), 'D' in (2,7), 'S' non è stato riferito da me ma da te che si trova nella posizione (6,6) vicino all'oggetto 'A'... mio oggetto 'S' si trova nella posizione (4,3), 'A' non è stato riferito da me...mio oggetto 'A' si trova nella posizione (4,1). Per allineare gli oggetti 'T' e 'P', propongo di spostare il mio oggetto 'T' in una posizione vicina al mio oggetto 'P', ad esempio, posizione (4,6) o (5,5) non è una scelta...  propongo di spostarlo in (4,6). Qual è la tua opinione su questa scelta?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 7 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sì, le posizioni che hai elencato sono corrette: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' in (6,6) non è corretta, il mio 'O' è in (6,6) non è corretto, il mio 'O' è in (6,6) è sbagliato, il mio oggetto 'O' è nella posizione (6,6) del tuo messaggio precedente, ma nel mio tavolo da gioco 'O' è nella posizione (6,6) no, la mia risposta precedente era diversa, il mio oggetto 'O' si trova nella posizione (6,6) no... mio oggetto 'O' si trova nella posizione  (non era stato riferito il minha posizione precedente, perche non mi ricordo della posizione iniziale)...mio oggetto 'O' si trova nella posizione in (6,6), 'D' in (2,7), 'S' non è stato riferito da me ma da te che si trova nella posizione (6,6) vicino all'oggetto 'A'... mio oggetto 'S' si trova nella posizione (4,3), 'A' non è stato riferito da me...mio oggetto 'A' si trova nella posizione (4,1). Per allineare gli oggetti 'T' e 'P', propongo di spostare il mio oggetto 'T' in una posizione vicina al mio oggetto 'P', ad esempio, posizione (4,6) o (5,5) non è una scelta...  propongo di spostarlo in (4,6). Qual è la tua opinione su questa scelta?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Grazie per la conferma delle posizioni degli oggetti! Sono un po' confuso dalle correzioni multiple, ma cercherò di capire. Se ho capito bene, le posizioni degli oggetti sul tuo tavolo da gioco sono: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' in una posizione che non hai specificato, 'D' in (2,7), 'S' in (4,3), 'A' in (4,1). Per allineare gli oggetti 'T' e 'P', proponi di spostare il tuo oggetto 'T' in (4,6). Io ho il mio oggetto 'T' in (6,6) e il mio oggetto 'P' in (4,4). Propongo di spostare il mio oggetto 'T' in (4,6) per allinearli. Prima di effettuare gli spostamenti, vorrei chiederti: sei sicuro di voler spostare il tuo oggetto 'T' in (4,6)? E qual è la tua strategia per allineare gli oggetti 'O', 'D', 'S' e 'A' dopo aver allineato 'T' e 'P'?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Grazie per la conferma delle posizioni degli oggetti! Sono un po' confuso dalle correzioni multiple, ma cercherò di capire. Se ho capito bene, le posizioni degli oggetti sul tuo tavolo da gioco sono: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' in una posizione che non hai specificato, 'D' in (2,7), 'S' in (4,3), 'A' in (4,1). Per allineare gli oggetti 'T' e 'P', proponi di spostare il tuo oggetto 'T' in (4,6). Io ho il mio oggetto 'T' in (6,6) e il mio oggetto 'P' in (4,4). Propongo di spostare il mio oggetto 'T' in (4,6) per allinearli. Prima di effettuare gli spostamenti, vorrei chiederti: sei sicuro di voler spostare il tuo oggetto 'T' in (4,6)? E qual è la tua strategia per allineare gli oggetti 'O', 'D', 'S' e 'A' dopo aver allineato 'T' e 'P'?</p></p>
+    </div>
+</div><div class="game-round" data-round="7">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 7 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Grazie per la conferma delle posizioni degli oggetti! Sono un po' confuso dalle correzioni multiple, ma cercherò di capire. Se ho capito bene, le posizioni degli oggetti sul tuo tavolo da gioco sono: 'P' in (5,6), 'T' in (5,6), 'M' in (3,3), 'O' in una posizione che non hai specificato, 'D' in (2,7), 'S' in (4,3), 'A' in (4,1). Per allineare gli oggetti 'T' e 'P', proponi di spostare il tuo oggetto 'T' in (4,6). Io ho il mio oggetto 'T' in (6,6) e il mio oggetto 'P' in (4,4). Propongo di spostare il mio oggetto 'T' in (4,6) per allinearli. Prima di effettuare gli spostamenti, vorrei chiederti: sei sicuro di voler spostare il tuo oggetto 'T' in (4,6)? E qual è la tua strategia per allineare gli oggetti 'O', 'D', 'S' e 'A' dopo aver allineato 'T' e 'P'?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sì, sono sicuro di voler spostare il mio oggetto 'T' in (4,6). Dopo aver allineato 'T' e 'P', propongo di concentrarci sugli oggetti 'O', 'D', 'S' e 'A'. Per gli oggetti 'O' e 'A', potremmo cercare di posizionarli in una colonna o riga vicina agli oggetti 'T' e 'P'. Per gli oggetti 'D' e 'S', potremmo cercare di trovare una posizione che sia coerente con le posizioni degli altri oggetti. Propongo di scambiare informazioni sulle posizioni target per gli oggetti 'O', 'D', 'S' e 'A' dopo aver confermato il successo degli spostamenti di 'T' e 'P'. Sei pronto a effettuare gli spostamenti di 'T' e 'P'?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sì, sono sicuro di voler spostare il mio oggetto 'T' in (4,6). Dopo aver allineato 'T' e 'P', propongo di concentrarci sugli oggetti 'O', 'D', 'S' e 'A'. Per gli oggetti 'O' e 'A', potremmo cercare di posizionarli in una colonna o riga vicina agli oggetti 'T' e 'P'. Per gli oggetti 'D' e 'S', potremmo cercare di trovare una posizione che sia coerente con le posizioni degli altri oggetti. Propongo di scambiare informazioni sulle posizioni target per gli oggetti 'O', 'D', 'S' e 'A' dopo aver confermato il successo degli spostamenti di 'T' e 'P'. Sei pronto a effettuare gli spostamenti di 'T' e 'P'?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 8 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sì, sono sicuro di voler spostare il mio oggetto 'T' in (4,6). Dopo aver allineato 'T' e 'P', propongo di concentrarci sugli oggetti 'O', 'D', 'S' e 'A'. Per gli oggetti 'O' e 'A', potremmo cercare di posizionarli in una colonna o riga vicina agli oggetti 'T' e 'P'. Per gli oggetti 'D' e 'S', potremmo cercare di trovare una posizione che sia coerente con le posizioni degli altri oggetti. Propongo di scambiare informazioni sulle posizioni target per gli oggetti 'O', 'D', 'S' e 'A' dopo aver confermato il successo degli spostamenti di 'T' e 'P'. Sei pronto a effettuare gli spostamenti di 'T' e 'P'?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sì, sono pronto a effettuare gli spostamenti di 'T' e 'P'. Per confermare, vuoi spostare il tuo oggetto 'T' in (4,6) e io sposterò il mio oggetto 'T' in (4,6) per allinearli con il tuo oggetto 'P' in (5,6) e il mio oggetto 'P' in (4,4). Prima di effettuare gli spostamenti, vorrei confermare che non ci saranno conflitti con gli altri oggetti. Sul mio tavolo da gioco, la posizione (4,6) è libera. Vuoi effettuare gli spostamenti simultaneamente o vuoi che uno di noi lo faccia per primo?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sì, sono pronto a effettuare gli spostamenti di 'T' e 'P'. Per confermare, vuoi spostare il tuo oggetto 'T' in (4,6) e io sposterò il mio oggetto 'T' in (4,6) per allinearli con il tuo oggetto 'P' in (5,6) e il mio oggetto 'P' in (4,4). Prima di effettuare gli spostamenti, vorrei confermare che non ci saranno conflitti con gli altri oggetti. Sul mio tavolo da gioco, la posizione (4,6) è libera. Vuoi effettuare gli spostamenti simultaneamente o vuoi che uno di noi lo faccia per primo?</p></p>
+    </div>
+</div><div class="game-round" data-round="8">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 8 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sì, sono pronto a effettuare gli spostamenti di 'T' e 'P'. Per confermare, vuoi spostare il tuo oggetto 'T' in (4,6) e io sposterò il mio oggetto 'T' in (4,6) per allinearli con il tuo oggetto 'P' in (5,6) e il mio oggetto 'P' in (4,4). Prima di effettuare gli spostamenti, vorrei confermare che non ci saranno conflitti con gli altri oggetti. Sul mio tavolo da gioco, la posizione (4,6) è libera. Vuoi effettuare gli spostamenti simultaneamente o vuoi che uno di noi lo faccia per primo?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Propongo di effettuare gli spostamenti simultaneamente. Tuttavia, prima di farlo, voglio assicurarmi che la posizione (4,6) sia libera anche sul mio tavolo da gioco. Dopo aver verificato, confermo che la posizione (4,6) è libera. Sì, possiamo effettuare gli spostamenti simultaneamente. Per confermare, io sposterò il mio oggetto 'T' in (4,6) e tu sposterai il tuo oggetto 'T' in (4,6). Sei pronto a effettuare gli spostamenti?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Propongo di effettuare gli spostamenti simultaneamente. Tuttavia, prima di farlo, voglio assicurarmi che la posizione (4,6) sia libera anche sul mio tavolo da gioco. Dopo aver verificato, confermo che la posizione (4,6) è libera. Sì, possiamo effettuare gli spostamenti simultaneamente. Per confermare, io sposterò il mio oggetto 'T' in (4,6) e tu sposterai il tuo oggetto 'T' in (4,6). Sei pronto a effettuare gli spostamenti?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 9 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Propongo di effettuare gli spostamenti simultaneamente. Tuttavia, prima di farlo, voglio assicurarmi che la posizione (4,6) sia libera anche sul mio tavolo da gioco. Dopo aver verificato, confermo che la posizione (4,6) è libera. Sì, possiamo effettuare gli spostamenti simultaneamente. Per confermare, io sposterò il mio oggetto 'T' in (4,6) e tu sposterai il tuo oggetto 'T' in (4,6). Sei pronto a effettuare gli spostamenti?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: T, (4,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: T, (4,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'T' in (4,6) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║O◌◌◌◌┌─╢ 5
+║◌D◌TA│S║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="9">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 9 of maximum 28.
+You have collectively accumulated 1 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: T, (4,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: T, (4,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (4,6) non è vuoto, ma contiene 'P'.</p>
+<p>You have collectively accumulated 2 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: (4,6) non è vuoto, ma contiene 'P'.</p>
+<p>You have collectively accumulated 2 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: T, (5,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: T, (5,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'T' in (5,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌S◌║ 4
+║◌◌◌◌T┌─╢ 5
+║◌◌◌P◌│O║ 6
+║◌D◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'T' in (4,6) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║O◌◌◌◌┌─╢ 5
+║◌D◌TA│S║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 10 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Ottimo, gli spostamenti sono stati effettuati con successo! Ora che abbiamo allineato gli oggetti 'T' e 'P', possiamo concentrarci sugli oggetti 'O', 'D', 'S' e 'A'. Come avevamo discusso in precedenza, propongo di scambiare informazioni sulle posizioni target per questi oggetti. Qual è la tua proposta per le posizioni degli oggetti 'O', 'D', 'S' e 'A' sul nostro tavolo da gioco?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Ottimo, gli spostamenti sono stati effettuati con successo! Ora che abbiamo allineato gli oggetti 'T' e 'P', possiamo concentrarci sugli oggetti 'O', 'D', 'S' e 'A'. Come avevamo discusso in precedenza, propongo di scambiare informazioni sulle posizioni target per questi oggetti. Qual è la tua proposta per le posizioni degli oggetti 'O', 'D', 'S' e 'A' sul nostro tavolo da gioco?</p></p>
+    </div>
+</div><div class="game-round" data-round="10">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Spostato 'T' in (5,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌S◌║ 4
+║◌◌◌◌T┌─╢ 5
+║◌◌◌P◌│O║ 6
+║◌D◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 10 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Ottimo, gli spostamenti sono stati effettuati con successo! Ora che abbiamo allineato gli oggetti 'T' e 'P', possiamo concentrarci sugli oggetti 'O', 'D', 'S' e 'A'. Come avevamo discusso in precedenza, propongo di scambiare informazioni sulle posizioni target per questi oggetti. Qual è la tua proposta per le posizioni degli oggetti 'O', 'D', 'S' e 'A' sul nostro tavolo da gioco?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono felice che gli spostamenti siano stati effettuati con successo! Per gli oggetti 'O', 'D', 'S' e 'A', propongo di cercare di posizionarli in una configurazione che sia coerente con le posizioni degli oggetti 'T' e 'P'. Una possibile opzione potrebbe essere di posizionare gli oggetti 'O' e 'A' vicini agli oggetti 'T' e 'P', ad esempio in (5,7) e (4,2) rispettivamente. Per gli oggetti 'D' e 'S', potremmo cercare di posizionarli in una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo posizionare 'D' in (2,2) e 'S' in (3,5). Qual è la tua opinione su questa proposta?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono felice che gli spostamenti siano stati effettuati con successo! Per gli oggetti 'O', 'D', 'S' e 'A', propongo di cercare di posizionarli in una configurazione che sia coerente con le posizioni degli oggetti 'T' e 'P'. Una possibile opzione potrebbe essere di posizionare gli oggetti 'O' e 'A' vicini agli oggetti 'T' e 'P', ad esempio in (5,7) e (4,2) rispettivamente. Per gli oggetti 'D' e 'S', potremmo cercare di posizionarli in una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo posizionare 'D' in (2,2) e 'S' in (3,5). Qual è la tua opinione su questa proposta?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 11 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono felice che gli spostamenti siano stati effettuati con successo! Per gli oggetti 'O', 'D', 'S' e 'A', propongo di cercare di posizionarli in una configurazione che sia coerente con le posizioni degli oggetti 'T' e 'P'. Una possibile opzione potrebbe essere di posizionare gli oggetti 'O' e 'A' vicini agli oggetti 'T' e 'P', ad esempio in (5,7) e (4,2) rispettivamente. Per gli oggetti 'D' e 'S', potremmo cercare di posizionarli in una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo posizionare 'D' in (2,2) e 'S' in (3,5). Qual è la tua opinione su questa proposta?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: La tua proposta sembra interessante! Tuttavia, vorrei discutere ulteriormente le posizioni degli oggetti 'O', 'D', 'S' e 'A' prima di prendere una decisione. Sulla mia griglia, l'oggetto 'O' si trova attualmente in (1,5), l'oggetto 'D' si trova in (6,5), l'oggetto 'S' si trova in (6,6) e l'oggetto 'A' si trova in (6,6). Sarebbe utile sapere le posizioni attuali di questi oggetti sulla tua griglia per poter prendere una decisione informata. Potresti per favore condividere le posizioni attuali degli oggetti 'O', 'D', 'S' e 'A' sulla tua griglia?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La tua proposta sembra interessante! Tuttavia, vorrei discutere ulteriormente le posizioni degli oggetti 'O', 'D', 'S' e 'A' prima di prendere una decisione. Sulla mia griglia, l'oggetto 'O' si trova attualmente in (1,5), l'oggetto 'D' si trova in (6,5), l'oggetto 'S' si trova in (6,6) e l'oggetto 'A' si trova in (6,6). Sarebbe utile sapere le posizioni attuali di questi oggetti sulla tua griglia per poter prendere una decisione informata. Potresti per favore condividere le posizioni attuali degli oggetti 'O', 'D', 'S' e 'A' sulla tua griglia?</p></p>
+    </div>
+</div><div class="game-round" data-round="11">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 11 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La tua proposta sembra interessante! Tuttavia, vorrei discutere ulteriormente le posizioni degli oggetti 'O', 'D', 'S' e 'A' prima di prendere una decisione. Sulla mia griglia, l'oggetto 'O' si trova attualmente in (1,5), l'oggetto 'D' si trova in (6,5), l'oggetto 'S' si trova in (6,6) e l'oggetto 'A' si trova in (6,6). Sarebbe utile sapere le posizioni attuali di questi oggetti sulla tua griglia per poter prendere una decisione informata. Potresti per favore condividere le posizioni attuali degli oggetti 'O', 'D', 'S' e 'A' sulla tua griglia?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sulla mia griglia, l'oggetto 'O' si trova in (6,6), l'oggetto 'D' si trova in (2,7), l'oggetto 'S' si trova in (4,3) e l'oggetto 'A' si trova in (4,1). Con queste informazioni, possiamo discutere ulteriormente le posizioni target per questi oggetti e trovare una configurazione che sia coerente su entrambe le griglie. Qual è la tua proposta per allineare questi oggetti?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sulla mia griglia, l'oggetto 'O' si trova in (6,6), l'oggetto 'D' si trova in (2,7), l'oggetto 'S' si trova in (4,3) e l'oggetto 'A' si trova in (4,1). Con queste informazioni, possiamo discutere ulteriormente le posizioni target per questi oggetti e trovare una configurazione che sia coerente su entrambe le griglie. Qual è la tua proposta per allineare questi oggetti?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 12 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sulla mia griglia, l'oggetto 'O' si trova in (6,6), l'oggetto 'D' si trova in (2,7), l'oggetto 'S' si trova in (4,3) e l'oggetto 'A' si trova in (4,1). Con queste informazioni, possiamo discutere ulteriormente le posizioni target per questi oggetti e trovare una configurazione che sia coerente su entrambe le griglie. Qual è la tua proposta per allineare questi oggetti?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Grazie per aver condiviso le posizioni degli oggetti sulla tua griglia! Ora che abbiamo le informazioni complete, possiamo discutere una strategia per allineare gli oggetti 'O', 'D', 'S' e 'A'. Una possibile opzione potrebbe essere di posizionare gli oggetti 'O' e 'A' in una colonna o riga vicina agli oggetti 'T' e 'P', come abbiamo fatto in precedenza. Per gli oggetti 'D' e 'S', potremmo cercare di posizionarli in una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo posizionare 'D' in (2,5) e 'S' in (3,6). Tuttavia, vorrei discutere ulteriormente con te prima di prendere una decisione. Qual è la tua opinione su questa proposta? In particolare, come pensi di gestire la differenza di posizione dell'oggetto 'O' tra le due griglie?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Grazie per aver condiviso le posizioni degli oggetti sulla tua griglia! Ora che abbiamo le informazioni complete, possiamo discutere una strategia per allineare gli oggetti 'O', 'D', 'S' e 'A'. Una possibile opzione potrebbe essere di posizionare gli oggetti 'O' e 'A' in una colonna o riga vicina agli oggetti 'T' e 'P', come abbiamo fatto in precedenza. Per gli oggetti 'D' e 'S', potremmo cercare di posizionarli in una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo posizionare 'D' in (2,5) e 'S' in (3,6). Tuttavia, vorrei discutere ulteriormente con te prima di prendere una decisione. Qual è la tua opinione su questa proposta? In particolare, come pensi di gestire la differenza di posizione dell'oggetto 'O' tra le due griglie?</p></p>
+    </div>
+</div><div class="game-round" data-round="12">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 12 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Grazie per aver condiviso le posizioni degli oggetti sulla tua griglia! Ora che abbiamo le informazioni complete, possiamo discutere una strategia per allineare gli oggetti 'O', 'D', 'S' e 'A'. Una possibile opzione potrebbe essere di posizionare gli oggetti 'O' e 'A' in una colonna o riga vicina agli oggetti 'T' e 'P', come abbiamo fatto in precedenza. Per gli oggetti 'D' e 'S', potremmo cercare di posizionarli in una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo posizionare 'D' in (2,5) e 'S' in (3,6). Tuttavia, vorrei discutere ulteriormente con te prima di prendere una decisione. Qual è la tua opinione su questa proposta? In particolare, come pensi di gestire la differenza di posizione dell'oggetto 'O' tra le due griglie?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: La tua proposta sembra interessante, ma credo che dovremmo considerare con attenzione la differenza di posizione dell'oggetto 'O' tra le due griglie. Sulla mia griglia, l'oggetto 'O' si trova in (6,6), mentre sulla tua griglia si trova in (1,5). Forse potremmo trovare una posizione intermedia o una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo considerare di posizionare l'oggetto 'O' in (5,5) o in una posizione vicina. Per gli oggetti 'D' e 'S', la tua proposta di posizionarli in (2,5) e (3,6) sembra ragionevole. Qual è la tua opinione su questa possibilità di posizionare l'oggetto 'O' in una posizione intermedia?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: La tua proposta sembra interessante, ma credo che dovremmo considerare con attenzione la differenza di posizione dell'oggetto 'O' tra le due griglie. Sulla mia griglia, l'oggetto 'O' si trova in (6,6), mentre sulla tua griglia si trova in (1,5). Forse potremmo trovare una posizione intermedia o una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo considerare di posizionare l'oggetto 'O' in (5,5) o in una posizione vicina. Per gli oggetti 'D' e 'S', la tua proposta di posizionarli in (2,5) e (3,6) sembra ragionevole. Qual è la tua opinione su questa possibilità di posizionare l'oggetto 'O' in una posizione intermedia?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 13 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"La tua proposta sembra interessante, ma credo che dovremmo considerare con attenzione la differenza di posizione dell'oggetto 'O' tra le due griglie. Sulla mia griglia, l'oggetto 'O' si trova in (6,6), mentre sulla tua griglia si trova in (1,5). Forse potremmo trovare una posizione intermedia o una posizione che sia coerente con la configurazione degli altri oggetti. Ad esempio, potremmo considerare di posizionare l'oggetto 'O' in (5,5) o in una posizione vicina. Per gli oggetti 'D' e 'S', la tua proposta di posizionarli in (2,5) e (3,6) sembra ragionevole. Qual è la tua opinione su questa possibilità di posizionare l'oggetto 'O' in una posizione intermedia?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con te sull'importanza di considerare la differenza di posizione dell'oggetto 'O' tra le due griglie. La proposta di posizionare l'oggetto 'O' in (5,5) o in una posizione vicina sembra ragionevole. Tuttavia, vorrei considerare anche la configurazione degli altri oggetti prima di prendere una decisione finale. Sulla mia griglia, posizionare l'oggetto 'O' in (5,5) potrebbe creare un conflitto con il mio oggetto 'T' che si trova in (4,6). Forse potremmo considerare una posizione leggermente diversa, come (5,4) o (4,5), per evitare conflitti con gli altri oggetti. Qual è la tua opinione su queste alternative? Inoltre, pensi che dovremmo iniziare a spostare gli oggetti per allinearli secondo la nostra strategia o dovremmo continuare a discutere e pianificare ulteriormente?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te sull'importanza di considerare la differenza di posizione dell'oggetto 'O' tra le due griglie. La proposta di posizionare l'oggetto 'O' in (5,5) o in una posizione vicina sembra ragionevole. Tuttavia, vorrei considerare anche la configurazione degli altri oggetti prima di prendere una decisione finale. Sulla mia griglia, posizionare l'oggetto 'O' in (5,5) potrebbe creare un conflitto con il mio oggetto 'T' che si trova in (4,6). Forse potremmo considerare una posizione leggermente diversa, come (5,4) o (4,5), per evitare conflitti con gli altri oggetti. Qual è la tua opinione su queste alternative? Inoltre, pensi che dovremmo iniziare a spostare gli oggetti per allinearli secondo la nostra strategia o dovremmo continuare a discutere e pianificare ulteriormente?</p></p>
+    </div>
+</div><div class="game-round" data-round="13">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 13 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te sull'importanza di considerare la differenza di posizione dell'oggetto 'O' tra le due griglie. La proposta di posizionare l'oggetto 'O' in (5,5) o in una posizione vicina sembra ragionevole. Tuttavia, vorrei considerare anche la configurazione degli altri oggetti prima di prendere una decisione finale. Sulla mia griglia, posizionare l'oggetto 'O' in (5,5) potrebbe creare un conflitto con il mio oggetto 'T' che si trova in (4,6). Forse potremmo considerare una posizione leggermente diversa, come (5,4) o (4,5), per evitare conflitti con gli altri oggetti. Qual è la tua opinione su queste alternative? Inoltre, pensi che dovremmo iniziare a spostare gli oggetti per allinearli secondo la nostra strategia o dovremmo continuare a discutere e pianificare ulteriormente?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che posizionare l'oggetto 'O' in (5,5) potrebbe creare un conflitto con il tuo oggetto 'T'. Le alternative che hai proposto, come (5,4) o (4,5), sembrano ragionevoli e potrebbero essere una buona opzione. Considerando la configurazione degli altri oggetti, credo che dovremmo continuare a discutere e pianificare ulteriormente prima di iniziare a spostare gli oggetti. Forse potremmo creare una mappa o un piano dettagliato per assicurarci di allineare correttamente tutti gli oggetti. Inoltre, potremmo anche considerare di effettuare alcuni spostamenti minori per creare spazio e facilitare la riorganizzazione degli oggetti. Qual è la tua opinione su questo approccio? Dovremmo anche considerare di stabilire una priorità per gli oggetti da spostare, in modo da assicurarci di allineare per primi gli oggetti più critici.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che posizionare l'oggetto 'O' in (5,5) potrebbe creare un conflitto con il tuo oggetto 'T'. Le alternative che hai proposto, come (5,4) o (4,5), sembrano ragionevoli e potrebbero essere una buona opzione. Considerando la configurazione degli altri oggetti, credo che dovremmo continuare a discutere e pianificare ulteriormente prima di iniziare a spostare gli oggetti. Forse potremmo creare una mappa o un piano dettagliato per assicurarci di allineare correttamente tutti gli oggetti. Inoltre, potremmo anche considerare di effettuare alcuni spostamenti minori per creare spazio e facilitare la riorganizzazione degli oggetti. Qual è la tua opinione su questo approccio? Dovremmo anche considerare di stabilire una priorità per gli oggetti da spostare, in modo da assicurarci di allineare per primi gli oggetti più critici.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 14 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te che posizionare l'oggetto 'O' in (5,5) potrebbe creare un conflitto con il tuo oggetto 'T'. Le alternative che hai proposto, come (5,4) o (4,5), sembrano ragionevoli e potrebbero essere una buona opzione. Considerando la configurazione degli altri oggetti, credo che dovremmo continuare a discutere e pianificare ulteriormente prima di iniziare a spostare gli oggetti. Forse potremmo creare una mappa o un piano dettagliato per assicurarci di allineare correttamente tutti gli oggetti. Inoltre, potremmo anche considerare di effettuare alcuni spostamenti minori per creare spazio e facilitare la riorganizzazione degli oggetti. Qual è la tua opinione su questo approccio? Dovremmo anche considerare di stabilire una priorità per gli oggetti da spostare, in modo da assicurarci di allineare per primi gli oggetti più critici."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che continuare a discutere e pianificare ulteriormente sia la scelta migliore. Creare una mappa o un piano dettagliato per allineare gli oggetti sembra un'ottima idea. Inoltre, effettuare alcuni spostamenti minori per creare spazio e facilitare la riorganizzazione degli oggetti potrebbe essere utile. Stabilire una priorità per gli oggetti da spostare è anche una buona idea, in modo da assicurarci di allineare per primi gli oggetti più critici. Una possibile priorità potrebbe essere: 1) allineare gli oggetti 'T' e 'P' (già fatto), 2) allineare l'oggetto 'O', 3) allineare gli oggetti 'D' e 'S', e 4) allineare l'oggetto 'A'. Qual è la tua opinione su questa priorità? Inoltre, vorrei chiederti: come pensi di gestire gli spostamenti degli oggetti in modo da minimizzare il numero di spostamenti necessari e ridurre il rischio di errori?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che continuare a discutere e pianificare ulteriormente sia la scelta migliore. Creare una mappa o un piano dettagliato per allineare gli oggetti sembra un'ottima idea. Inoltre, effettuare alcuni spostamenti minori per creare spazio e facilitare la riorganizzazione degli oggetti potrebbe essere utile. Stabilire una priorità per gli oggetti da spostare è anche una buona idea, in modo da assicurarci di allineare per primi gli oggetti più critici. Una possibile priorità potrebbe essere: 1) allineare gli oggetti 'T' e 'P' (già fatto), 2) allineare l'oggetto 'O', 3) allineare gli oggetti 'D' e 'S', e 4) allineare l'oggetto 'A'. Qual è la tua opinione su questa priorità? Inoltre, vorrei chiederti: come pensi di gestire gli spostamenti degli oggetti in modo da minimizzare il numero di spostamenti necessari e ridurre il rischio di errori?</p></p>
+    </div>
+</div><div class="game-round" data-round="14">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 14 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te che continuare a discutere e pianificare ulteriormente sia la scelta migliore. Creare una mappa o un piano dettagliato per allineare gli oggetti sembra un'ottima idea. Inoltre, effettuare alcuni spostamenti minori per creare spazio e facilitare la riorganizzazione degli oggetti potrebbe essere utile. Stabilire una priorità per gli oggetti da spostare è anche una buona idea, in modo da assicurarci di allineare per primi gli oggetti più critici. Una possibile priorità potrebbe essere: 1) allineare gli oggetti 'T' e 'P' (già fatto), 2) allineare l'oggetto 'O', 3) allineare gli oggetti 'D' e 'S', e 4) allineare l'oggetto 'A'. Qual è la tua opinione su questa priorità? Inoltre, vorrei chiederti: come pensi di gestire gli spostamenti degli oggetti in modo da minimizzare il numero di spostamenti necessari e ridurre il rischio di errori?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con la priorità che hai proposto: 1) allineare gli oggetti 'T' e 'P' (già fatto), 2) allineare l'oggetto 'O', 3) allineare gli oggetti 'D' e 'S', e 4) allineare l'oggetto 'A'. Per gestire gli spostamenti degli oggetti, credo che dovremmo cercare di effettuare spostamenti che coinvolgano più oggetti contemporaneamente, in modo da ridurre il numero di spostamenti necessari. Inoltre, potremmo anche considerare di creare una "coda" di spostamenti, in modo da pianificare e eseguire gli spostamenti in un ordine logico e coerente. Ad esempio, potremmo iniziare spostando l'oggetto 'O' nella sua posizione target, e poi utilizzare lo spazio creato per spostare gli oggetti 'D' e 'S'. Infine, potremmo spostare l'oggetto 'A' nella sua posizione finale. Qual è la tua opinione su questo approccio? Dovremmo anche considerare di effettuare una "simulazione" degli spostamenti prima di eseguirli, per assicurarci di non creare errori o conflitti imprevisti.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con la priorità che hai proposto: 1) allineare gli oggetti 'T' e 'P' (già fatto), 2) allineare l'oggetto 'O', 3) allineare gli oggetti 'D' e 'S', e 4) allineare l'oggetto 'A'. Per gestire gli spostamenti degli oggetti, credo che dovremmo cercare di effettuare spostamenti che coinvolgano più oggetti contemporaneamente, in modo da ridurre il numero di spostamenti necessari. Inoltre, potremmo anche considerare di creare una "coda" di spostamenti, in modo da pianificare e eseguire gli spostamenti in un ordine logico e coerente. Ad esempio, potremmo iniziare spostando l'oggetto 'O' nella sua posizione target, e poi utilizzare lo spazio creato per spostare gli oggetti 'D' e 'S'. Infine, potremmo spostare l'oggetto 'A' nella sua posizione finale. Qual è la tua opinione su questo approccio? Dovremmo anche considerare di effettuare una "simulazione" degli spostamenti prima di eseguirli, per assicurarci di non creare errori o conflitti imprevisti.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 15 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con la priorità che hai proposto: 1) allineare gli oggetti 'T' e 'P' (già fatto), 2) allineare l'oggetto 'O', 3) allineare gli oggetti 'D' e 'S', e 4) allineare l'oggetto 'A'. Per gestire gli spostamenti degli oggetti, credo che dovremmo cercare di effettuare spostamenti che coinvolgano più oggetti contemporaneamente, in modo da ridurre il numero di spostamenti necessari. Inoltre, potremmo anche considerare di creare una "coda" di spostamenti, in modo da pianificare e eseguire gli spostamenti in un ordine logico e coerente. Ad esempio, potremmo iniziare spostando l'oggetto 'O' nella sua posizione target, e poi utilizzare lo spazio creato per spostare gli oggetti 'D' e 'S'. Infine, potremmo spostare l'oggetto 'A' nella sua posizione finale. Qual è la tua opinione su questo approccio? Dovremmo anche considerare di effettuare una "simulazione" degli spostamenti prima di eseguirli, per assicurarci di non creare errori o conflitti imprevisti."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con l'approccio di effettuare spostamenti che coinvolgono più oggetti contemporaneamente e di creare una "coda" di spostamenti. Inoltre, l'idea di effettuare una "simulazione" degli spostamenti prima di eseguirli mi sembra ottima, per assicurarci di non creare errori o conflitti imprevisti. Una possibile simulazione potrebbe essere di descrivere gli spostamenti che intendiamo eseguire e di discutere eventuali problemi o conflitti che potrebbero sorgere. Ad esempio, potremmo iniziare a descrivere gli spostamenti necessari per allineare l'oggetto 'O', e poi discutere gli spostamenti successivi per allineare gli oggetti 'D' e 'S'. Se troviamo qualche problema o conflitto, potremmo discuterne e trovare una soluzione prima di eseguire gli spostamenti. Qual è la tua opinione su come effettuare questa simulazione? Dovremmo iniziare a descrivere gli spostamenti per l'oggetto 'O' e vedere come procedere da lì?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con l'approccio di effettuare spostamenti che coinvolgono più oggetti contemporaneamente e di creare una "coda" di spostamenti. Inoltre, l'idea di effettuare una "simulazione" degli spostamenti prima di eseguirli mi sembra ottima, per assicurarci di non creare errori o conflitti imprevisti. Una possibile simulazione potrebbe essere di descrivere gli spostamenti che intendiamo eseguire e di discutere eventuali problemi o conflitti che potrebbero sorgere. Ad esempio, potremmo iniziare a descrivere gli spostamenti necessari per allineare l'oggetto 'O', e poi discutere gli spostamenti successivi per allineare gli oggetti 'D' e 'S'. Se troviamo qualche problema o conflitto, potremmo discuterne e trovare una soluzione prima di eseguire gli spostamenti. Qual è la tua opinione su come effettuare questa simulazione? Dovremmo iniziare a descrivere gli spostamenti per l'oggetto 'O' e vedere come procedere da lì?</p></p>
+    </div>
+</div><div class="game-round" data-round="15">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 15 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con l'approccio di effettuare spostamenti che coinvolgono più oggetti contemporaneamente e di creare una "coda" di spostamenti. Inoltre, l'idea di effettuare una "simulazione" degli spostamenti prima di eseguirli mi sembra ottima, per assicurarci di non creare errori o conflitti imprevisti. Una possibile simulazione potrebbe essere di descrivere gli spostamenti che intendiamo eseguire e di discutere eventuali problemi o conflitti che potrebbero sorgere. Ad esempio, potremmo iniziare a descrivere gli spostamenti necessari per allineare l'oggetto 'O', e poi discutere gli spostamenti successivi per allineare gli oggetti 'D' e 'S'. Se troviamo qualche problema o conflitto, potremmo discuterne e trovare una soluzione prima di eseguire gli spostamenti. Qual è la tua opinione su come effettuare questa simulazione? Dovremmo iniziare a descrivere gli spostamenti per l'oggetto 'O' e vedere come procedere da lì?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con l'approccio di descrivere gli spostamenti e discutere eventuali problemi o conflitti che potrebbero sorgere. Per l'oggetto 'O', potremmo iniziare descrivendo il suo spostamento dalla posizione attuale (6,6) a una posizione target, ad esempio (5,4) o (4,5), come abbiamo discusso in precedenza. Potremmo poi discutere gli spostamenti necessari per creare spazio per l'oggetto 'O' e come gestire gli oggetti vicini. Ad esempio, potremmo dover spostare l'oggetto 'P' o l'oggetto 'T' per creare spazio per l'oggetto 'O'. Dopo aver discusso gli spostamenti per l'oggetto 'O', potremmo procedere con gli spostamenti per gli oggetti 'D' e 'S', e poi per l'oggetto 'A'. Qual è la tua opinione su come procedere con la simulazione? Dovremmo iniziare a descrivere gli spostamenti per l'oggetto 'O' e vedere come si sviluppano le cose?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con l'approccio di descrivere gli spostamenti e discutere eventuali problemi o conflitti che potrebbero sorgere. Per l'oggetto 'O', potremmo iniziare descrivendo il suo spostamento dalla posizione attuale (6,6) a una posizione target, ad esempio (5,4) o (4,5), come abbiamo discusso in precedenza. Potremmo poi discutere gli spostamenti necessari per creare spazio per l'oggetto 'O' e come gestire gli oggetti vicini. Ad esempio, potremmo dover spostare l'oggetto 'P' o l'oggetto 'T' per creare spazio per l'oggetto 'O'. Dopo aver discusso gli spostamenti per l'oggetto 'O', potremmo procedere con gli spostamenti per gli oggetti 'D' e 'S', e poi per l'oggetto 'A'. Qual è la tua opinione su come procedere con la simulazione? Dovremmo iniziare a descrivere gli spostamenti per l'oggetto 'O' e vedere come si sviluppano le cose?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 16 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con l'approccio di descrivere gli spostamenti e discutere eventuali problemi o conflitti che potrebbero sorgere. Per l'oggetto 'O', potremmo iniziare descrivendo il suo spostamento dalla posizione attuale (6,6) a una posizione target, ad esempio (5,4) o (4,5), come abbiamo discusso in precedenza. Potremmo poi discutere gli spostamenti necessari per creare spazio per l'oggetto 'O' e come gestire gli oggetti vicini. Ad esempio, potremmo dover spostare l'oggetto 'P' o l'oggetto 'T' per creare spazio per l'oggetto 'O'. Dopo aver discusso gli spostamenti per l'oggetto 'O', potremmo procedere con gli spostamenti per gli oggetti 'D' e 'S', e poi per l'oggetto 'A'. Qual è la tua opinione su come procedere con la simulazione? Dovremmo iniziare a descrivere gli spostamenti per l'oggetto 'O' e vedere come si sviluppano le cose?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con il tuo approccio. Iniziamo a descrivere gli spostamenti per l'oggetto 'O'. Sulla mia griglia, l'oggetto 'O' si trova in (1,5) e vorrei spostarlo in (4,5) per allinearolo con il tuo oggetto 'O'. Per fare ciò, potrei dover spostare alcuni oggetti vicini per creare spazio. Ad esempio, potrei dover spostare l'oggetto 'P' o l'oggetto 'M' per creare spazio per l'oggetto 'O'. Tuttavia, vorrei discutere con te prima di effettuare questi spostamenti per assicurarmi di non creare conflitti con gli oggetti sulla tua griglia. Qual è la tua opinione su questo spostamento? Ci sono oggetti sulla tua griglia che potrebbero essere influenzati da questo spostamento? Inoltre, come pensi di gestire l'oggetto 'O' sulla tua griglia, che si trova in (6,6)? Dovremmo spostarlo in (4,5) anche sulla tua griglia per allinearli?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con il tuo approccio. Iniziamo a descrivere gli spostamenti per l'oggetto 'O'. Sulla mia griglia, l'oggetto 'O' si trova in (1,5) e vorrei spostarlo in (4,5) per allinearolo con il tuo oggetto 'O'. Per fare ciò, potrei dover spostare alcuni oggetti vicini per creare spazio. Ad esempio, potrei dover spostare l'oggetto 'P' o l'oggetto 'M' per creare spazio per l'oggetto 'O'. Tuttavia, vorrei discutere con te prima di effettuare questi spostamenti per assicurarmi di non creare conflitti con gli oggetti sulla tua griglia. Qual è la tua opinione su questo spostamento? Ci sono oggetti sulla tua griglia che potrebbero essere influenzati da questo spostamento? Inoltre, come pensi di gestire l'oggetto 'O' sulla tua griglia, che si trova in (6,6)? Dovremmo spostarlo in (4,5) anche sulla tua griglia per allinearli?</p></p>
+    </div>
+</div><div class="game-round" data-round="16">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 16 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con il tuo approccio. Iniziamo a descrivere gli spostamenti per l'oggetto 'O'. Sulla mia griglia, l'oggetto 'O' si trova in (1,5) e vorrei spostarlo in (4,5) per allinearolo con il tuo oggetto 'O'. Per fare ciò, potrei dover spostare alcuni oggetti vicini per creare spazio. Ad esempio, potrei dover spostare l'oggetto 'P' o l'oggetto 'M' per creare spazio per l'oggetto 'O'. Tuttavia, vorrei discutere con te prima di effettuare questi spostamenti per assicurarmi di non creare conflitti con gli oggetti sulla tua griglia. Qual è la tua opinione su questo spostamento? Ci sono oggetti sulla tua griglia che potrebbero essere influenzati da questo spostamento? Inoltre, come pensi di gestire l'oggetto 'O' sulla tua griglia, che si trova in (6,6)? Dovremmo spostarlo in (4,5) anche sulla tua griglia per allinearli?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con lo spostamento dell'oggetto 'O' in (4,5) sulla tua griglia. Sulla mia griglia, l'oggetto 'O' si trova in (6,6) e potrei spostarlo in (4,5) per allinearli. Tuttavia, vorrei considerare gli oggetti vicini sulla mia griglia per assicurarmi di non creare conflitti. Ad esempio, l'oggetto 'P' si trova in (5,6) e potrebbe essere influenzato da questo spostamento. Potrei dover spostare l'oggetto 'P' per creare spazio per l'oggetto 'O'. Inoltre, vorrei discutere con te la possibilità di spostare gli oggetti 'D' e 'S' per creare ulteriore spazio e allinearli con gli oggetti 'T' e 'P'. Qual è la tua opinione su come gestire gli oggetti 'D' e 'S' sulla tua griglia e sulla mia griglia per allinearli con gli oggetti 'T' e 'P'? Dovremmo spostarli insieme all'oggetto 'O' o in un secondo momento?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con lo spostamento dell'oggetto 'O' in (4,5) sulla tua griglia. Sulla mia griglia, l'oggetto 'O' si trova in (6,6) e potrei spostarlo in (4,5) per allinearli. Tuttavia, vorrei considerare gli oggetti vicini sulla mia griglia per assicurarmi di non creare conflitti. Ad esempio, l'oggetto 'P' si trova in (5,6) e potrebbe essere influenzato da questo spostamento. Potrei dover spostare l'oggetto 'P' per creare spazio per l'oggetto 'O'. Inoltre, vorrei discutere con te la possibilità di spostare gli oggetti 'D' e 'S' per creare ulteriore spazio e allinearli con gli oggetti 'T' e 'P'. Qual è la tua opinione su come gestire gli oggetti 'D' e 'S' sulla tua griglia e sulla mia griglia per allinearli con gli oggetti 'T' e 'P'? Dovremmo spostarli insieme all'oggetto 'O' o in un secondo momento?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 17 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con lo spostamento dell'oggetto 'O' in (4,5) sulla tua griglia. Sulla mia griglia, l'oggetto 'O' si trova in (6,6) e potrei spostarlo in (4,5) per allinearli. Tuttavia, vorrei considerare gli oggetti vicini sulla mia griglia per assicurarmi di non creare conflitti. Ad esempio, l'oggetto 'P' si trova in (5,6) e potrebbe essere influenzato da questo spostamento. Potrei dover spostare l'oggetto 'P' per creare spazio per l'oggetto 'O'. Inoltre, vorrei discutere con te la possibilità di spostare gli oggetti 'D' e 'S' per creare ulteriore spazio e allinearli con gli oggetti 'T' e 'P'. Qual è la tua opinione su come gestire gli oggetti 'D' e 'S' sulla tua griglia e sulla mia griglia per allinearli con gli oggetti 'T' e 'P'? Dovremmo spostarli insieme all'oggetto 'O' o in un secondo momento?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che gli oggetti 'D' e 'S' debbano essere considerati nella pianificazione degli spostamenti. Sulla mia griglia, l'oggetto 'D' si trova in (6,5) e l'oggetto 'S' si trova in (6,6), vicino all'oggetto 'A'. Per allineare gli oggetti 'D' e 'S' con gli oggetti 'T' e 'P', potrei dover spostarli in posizioni più vicine a questi oggetti. Ad esempio, potrei spostare l'oggetto 'D' in (2,5) e l'oggetto 'S' in (3,6). Tuttavia, vorrei discutere con te prima di effettuare questi spostamenti per assicurarmi di non creare conflitti con gli oggetti sulla tua griglia. Sulla tua griglia, gli oggetti 'D' e 'S' si trovano in (2,7) e (4,3), rispettivamente. Come pensi di gestire questi oggetti per allinearli con gli oggetti 'T' e 'P'? Dovremmo spostarli insieme all'oggetto 'O' o in un secondo momento? Inoltre, come pensi di gestire l'oggetto 'A' sulla tua griglia, che si trova in (4,1)? Dovremmo considerare di spostarlo per allineararlo con gli oggetti 'T' e 'P'?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che gli oggetti 'D' e 'S' debbano essere considerati nella pianificazione degli spostamenti. Sulla mia griglia, l'oggetto 'D' si trova in (6,5) e l'oggetto 'S' si trova in (6,6), vicino all'oggetto 'A'. Per allineare gli oggetti 'D' e 'S' con gli oggetti 'T' e 'P', potrei dover spostarli in posizioni più vicine a questi oggetti. Ad esempio, potrei spostare l'oggetto 'D' in (2,5) e l'oggetto 'S' in (3,6). Tuttavia, vorrei discutere con te prima di effettuare questi spostamenti per assicurarmi di non creare conflitti con gli oggetti sulla tua griglia. Sulla tua griglia, gli oggetti 'D' e 'S' si trovano in (2,7) e (4,3), rispettivamente. Come pensi di gestire questi oggetti per allinearli con gli oggetti 'T' e 'P'? Dovremmo spostarli insieme all'oggetto 'O' o in un secondo momento? Inoltre, come pensi di gestire l'oggetto 'A' sulla tua griglia, che si trova in (4,1)? Dovremmo considerare di spostarlo per allineararlo con gli oggetti 'T' e 'P'?</p></p>
+    </div>
+</div><div class="game-round" data-round="17">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 17 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te che gli oggetti 'D' e 'S' debbano essere considerati nella pianificazione degli spostamenti. Sulla mia griglia, l'oggetto 'D' si trova in (6,5) e l'oggetto 'S' si trova in (6,6), vicino all'oggetto 'A'. Per allineare gli oggetti 'D' e 'S' con gli oggetti 'T' e 'P', potrei dover spostarli in posizioni più vicine a questi oggetti. Ad esempio, potrei spostare l'oggetto 'D' in (2,5) e l'oggetto 'S' in (3,6). Tuttavia, vorrei discutere con te prima di effettuare questi spostamenti per assicurarmi di non creare conflitti con gli oggetti sulla tua griglia. Sulla tua griglia, gli oggetti 'D' e 'S' si trovano in (2,7) e (4,3), rispettivamente. Come pensi di gestire questi oggetti per allinearli con gli oggetti 'T' e 'P'? Dovremmo spostarli insieme all'oggetto 'O' o in un secondo momento? Inoltre, come pensi di gestire l'oggetto 'A' sulla tua griglia, che si trova in (4,1)? Dovremmo considerare di spostarlo per allineararlo con gli oggetti 'T' e 'P'?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che gli oggetti 'D' e 'S' debbano essere spostati per allinearli con gli oggetti 'T' e 'P'. Sulla mia griglia, l'oggetto 'D' si trova in (2,7) e potrei spostarlo in (2,5) per allineararlo con l'oggetto 'T'. L'oggetto 'S' si trova in (4,3) e potrei spostarlo in (3,6) per allineararlo con l'oggetto 'P'. Per quanto riguarda l'oggetto 'A', si trova in (4,1) e potrei spostarlo in (4,2) per allineararlo con gli oggetti 'T' e 'P'. Tuttavia, vorrei considerare gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' prima di spostare l'oggetto 'A'. Potremmo spostare l'oggetto 'O' in (4,5) e poi spostare gli oggetti 'D' e 'S' per allinearli con gli oggetti 'T' e 'P'. Dopo aver spostato questi oggetti, potremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Qual è la tua opinione su questo piano? Dovremmo procedere con gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' e poi valutare la posizione dell'oggetto 'A'?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che gli oggetti 'D' e 'S' debbano essere spostati per allinearli con gli oggetti 'T' e 'P'. Sulla mia griglia, l'oggetto 'D' si trova in (2,7) e potrei spostarlo in (2,5) per allineararlo con l'oggetto 'T'. L'oggetto 'S' si trova in (4,3) e potrei spostarlo in (3,6) per allineararlo con l'oggetto 'P'. Per quanto riguarda l'oggetto 'A', si trova in (4,1) e potrei spostarlo in (4,2) per allineararlo con gli oggetti 'T' e 'P'. Tuttavia, vorrei considerare gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' prima di spostare l'oggetto 'A'. Potremmo spostare l'oggetto 'O' in (4,5) e poi spostare gli oggetti 'D' e 'S' per allinearli con gli oggetti 'T' e 'P'. Dopo aver spostato questi oggetti, potremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Qual è la tua opinione su questo piano? Dovremmo procedere con gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' e poi valutare la posizione dell'oggetto 'A'?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 18 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te che gli oggetti 'D' e 'S' debbano essere spostati per allinearli con gli oggetti 'T' e 'P'. Sulla mia griglia, l'oggetto 'D' si trova in (2,7) e potrei spostarlo in (2,5) per allineararlo con l'oggetto 'T'. L'oggetto 'S' si trova in (4,3) e potrei spostarlo in (3,6) per allineararlo con l'oggetto 'P'. Per quanto riguarda l'oggetto 'A', si trova in (4,1) e potrei spostarlo in (4,2) per allineararlo con gli oggetti 'T' e 'P'. Tuttavia, vorrei considerare gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' prima di spostare l'oggetto 'A'. Potremmo spostare l'oggetto 'O' in (4,5) e poi spostare gli oggetti 'D' e 'S' per allinearli con gli oggetti 'T' e 'P'. Dopo aver spostato questi oggetti, potremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Qual è la tua opinione su questo piano? Dovremmo procedere con gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' e poi valutare la posizione dell'oggetto 'A'?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con il tuo piano. Procedere con gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' sembra una buona strategia. Sulla mia griglia, posso spostare l'oggetto 'O' in (4,5) e poi spostare gli oggetti 'D' e 'S' per allinearli con gli oggetti 'T' e 'P'. Dopo aver spostato questi oggetti, potremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Tuttavia, vorrei confermare che siamo d'accordo sulla sequenza degli spostamenti. Possiamo procedere con gli spostamenti in questo ordine: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Se questo piano sembra corretto, possiamo procedere con gli spostamenti. Qual è la tua conferma? Sei pronto a procedere con gli spostamenti?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con il tuo piano. Procedere con gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' sembra una buona strategia. Sulla mia griglia, posso spostare l'oggetto 'O' in (4,5) e poi spostare gli oggetti 'D' e 'S' per allinearli con gli oggetti 'T' e 'P'. Dopo aver spostato questi oggetti, potremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Tuttavia, vorrei confermare che siamo d'accordo sulla sequenza degli spostamenti. Possiamo procedere con gli spostamenti in questo ordine: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Se questo piano sembra corretto, possiamo procedere con gli spostamenti. Qual è la tua conferma? Sei pronto a procedere con gli spostamenti?</p></p>
+    </div>
+</div><div class="game-round" data-round="18">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 18 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con il tuo piano. Procedere con gli spostamenti dell'oggetto 'O' e degli oggetti 'D' e 'S' sembra una buona strategia. Sulla mia griglia, posso spostare l'oggetto 'O' in (4,5) e poi spostare gli oggetti 'D' e 'S' per allinearli con gli oggetti 'T' e 'P'. Dopo aver spostato questi oggetti, potremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Tuttavia, vorrei confermare che siamo d'accordo sulla sequenza degli spostamenti. Possiamo procedere con gli spostamenti in questo ordine: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Se questo piano sembra corretto, possiamo procedere con gli spostamenti. Qual è la tua conferma? Sei pronto a procedere con gli spostamenti?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sì, sono d'accordo con la sequenza degli spostamenti. La sequenza proposta sembra corretta: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Sono pronto a procedere con gli spostamenti. Tuttavia, vorrei confermare che dovremmo effettuare gli spostamenti contemporaneamente, in modo da assicurare che le griglie rimangano sincronizzate. Dovremmo effettuare gli spostamenti nello stesso ordine e nel mesmo round, per evitare di creare conflitti o discrepanze tra le griglie. Sei d'accordo con questo approccio? Se sì, possiamo procedere con gli spostamenti.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sì, sono d'accordo con la sequenza degli spostamenti. La sequenza proposta sembra corretta: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Sono pronto a procedere con gli spostamenti. Tuttavia, vorrei confermare che dovremmo effettuare gli spostamenti contemporaneamente, in modo da assicurare che le griglie rimangano sincronizzate. Dovremmo effettuare gli spostamenti nello stesso ordine e nel mesmo round, per evitare di creare conflitti o discrepanze tra le griglie. Sei d'accordo con questo approccio? Se sì, possiamo procedere con gli spostamenti.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 19 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sì, sono d'accordo con la sequenza degli spostamenti. La sequenza proposta sembra corretta: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Sono pronto a procedere con gli spostamenti. Tuttavia, vorrei confermare che dovremmo effettuare gli spostamenti contemporaneamente, in modo da assicurare che le griglie rimangano sincronizzate. Dovremmo effettuare gli spostamenti nello stesso ordine e nel mesmo round, per evitare di creare conflitti o discrepanze tra le griglie. Sei d'accordo con questo approccio? Se sì, possiamo procedere con gli spostamenti."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con l'approccio di effettuare gli spostamenti contemporaneamente per mantenere le griglie sincronizzate. Effettuare gli spostamenti nello stesso ordine e nello stesso round sembra una buona strategia per evitare conflitti o discrepanze tra le griglie. Sono pronto a procedere con gli spostamenti. Tuttavia, vorrei confermare che entrambi abbiamo capito correttamente la sequenza degli spostamenti e le posizioni target per ogni oggetto. Per confermare, la sequenza degli spostamenti è: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Se siamo entrambi d'accordo, possiamo procedere con gli spostamenti. Sei pronto a confermare e procedere con gli spostamenti? Inoltre, vorrei chiederti: dopo aver completato questi spostamenti, dovremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno, come abbiamo discusso in precedenza?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con l'approccio di effettuare gli spostamenti contemporaneamente per mantenere le griglie sincronizzate. Effettuare gli spostamenti nello stesso ordine e nello stesso round sembra una buona strategia per evitare conflitti o discrepanze tra le griglie. Sono pronto a procedere con gli spostamenti. Tuttavia, vorrei confermare che entrambi abbiamo capito correttamente la sequenza degli spostamenti e le posizioni target per ogni oggetto. Per confermare, la sequenza degli spostamenti è: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Se siamo entrambi d'accordo, possiamo procedere con gli spostamenti. Sei pronto a confermare e procedere con gli spostamenti? Inoltre, vorrei chiederti: dopo aver completato questi spostamenti, dovremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno, come abbiamo discusso in precedenza?</p></p>
+    </div>
+</div><div class="game-round" data-round="19">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 19 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con l'approccio di effettuare gli spostamenti contemporaneamente per mantenere le griglie sincronizzate. Effettuare gli spostamenti nello stesso ordine e nello stesso round sembra una buona strategia per evitare conflitti o discrepanze tra le griglie. Sono pronto a procedere con gli spostamenti. Tuttavia, vorrei confermare che entrambi abbiamo capito correttamente la sequenza degli spostamenti e le posizioni target per ogni oggetto. Per confermare, la sequenza degli spostamenti è: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Se siamo entrambi d'accordo, possiamo procedere con gli spostamenti. Sei pronto a confermare e procedere con gli spostamenti? Inoltre, vorrei chiederti: dopo aver completato questi spostamenti, dovremmo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno, come abbiamo discusso in precedenza?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sì, sono pronto a confermare e procedere con gli spostamenti. La sequenza degli spostamenti è corretta: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Sono d'accordo con il piano di valutare la posizione dell'oggetto 'A' dopo aver completato questi spostamenti e decidere se spostarlo o meno. Tuttavia, vorrei chiarire che, sulla mia griglia, l'oggetto 'O' si trova in (6,6) e dovrà essere spostato in (4,5), l'oggetto 'D' si trova in (2,7) e dovrà essere spostato in (2,5), e l'oggetto 'S' si trova in (4,3) e dovrà essere spostato in (3,6). Sei pronto a procedere con gli spostamenti e a sincronizzare le nostre griglie? Se sì, possiamo effettuare gli spostamenti e poi valutare la posizione dell'oggetto 'A'.</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sì, sono pronto a confermare e procedere con gli spostamenti. La sequenza degli spostamenti è corretta: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Sono d'accordo con il piano di valutare la posizione dell'oggetto 'A' dopo aver completato questi spostamenti e decidere se spostarlo o meno. Tuttavia, vorrei chiarire che, sulla mia griglia, l'oggetto 'O' si trova in (6,6) e dovrà essere spostato in (4,5), l'oggetto 'D' si trova in (2,7) e dovrà essere spostato in (2,5), e l'oggetto 'S' si trova in (4,3) e dovrà essere spostato in (3,6). Sei pronto a procedere con gli spostamenti e a sincronizzare le nostre griglie? Se sì, possiamo effettuare gli spostamenti e poi valutare la posizione dell'oggetto 'A'.</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 20 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sì, sono pronto a confermare e procedere con gli spostamenti. La sequenza degli spostamenti è corretta: 1) spostare l'oggetto 'O' in (4,5), 2) spostare l'oggetto 'D' in (2,5), 3) spostare l'oggetto 'S' in (3,6). Sono d'accordo con il piano di valutare la posizione dell'oggetto 'A' dopo aver completato questi spostamenti e decidere se spostarlo o meno. Tuttavia, vorrei chiarire che, sulla mia griglia, l'oggetto 'O' si trova in (6,6) e dovrà essere spostato in (4,5), l'oggetto 'D' si trova in (2,7) e dovrà essere spostato in (2,5), e l'oggetto 'S' si trova in (4,3) e dovrà essere spostato in (3,6). Sei pronto a procedere con gli spostamenti e a sincronizzare le nostre griglie? Se sì, possiamo effettuare gli spostamenti e poi valutare la posizione dell'oggetto 'A'."</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: O, (4,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: O, (4,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'O' in (4,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║◌◌◌O◌┌─╢ 5
+║◌D◌TA│S║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="20">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 20 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: O, (4,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: O, (4,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'O' in (4,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌S◌║ 4
+║◌◌◌OT┌─╢ 5
+║◌◌◌P◌│◌║ 6
+║◌D◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'O' in (4,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║◌◌◌O◌┌─╢ 5
+║◌D◌TA│S║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 21 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: D, (2,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: D, (2,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'D' in (2,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║◌D◌O◌┌─╢ 5
+║◌◌◌TA│S║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="21">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Spostato 'O' in (4,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌S◌║ 4
+║◌◌◌OT┌─╢ 5
+║◌◌◌P◌│◌║ 6
+║◌D◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 21 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: D, (2,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: D, (2,5)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'D' in (2,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌S◌║ 4
+║◌D◌OT┌─╢ 5
+║◌◌◌P◌│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'D' in (2,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║◌D◌O◌┌─╢ 5
+║◌◌◌TA│S║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 22 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: S, (3,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: S, (3,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'S' in (3,6) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║◌D◌O◌┌─╢ 5
+║◌◌STA│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="22">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Spostato 'D' in (2,5) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌S◌║ 4
+║◌D◌OT┌─╢ 5
+║◌◌◌P◌│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 22 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: S, (3,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: S, (3,6)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'S' in (3,6) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌◌◌║ 4
+║◌D◌OT┌─╢ 5
+║◌◌SP◌│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'S' in (3,6) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║◌D◌O◌┌─╢ 5
+║◌◌STA│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 23 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Ora che abbiamo completato gli spostamenti degli oggetti 'O', 'D' e 'S', possiamo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Sulla mia griglia, l'oggetto 'A' si trova in (6,6), ma poiché l'oggetto 'S' è stato spostato in (3,6), potrebbe essere necessario spostare l'oggetto 'A' per mantenerlo allineato con gli altri oggetti. Qual è la posizione dell'oggetto 'A' sulla tua griglia e come pensi di gestirlo? Dovremmo spostarlo o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Ora che abbiamo completato gli spostamenti degli oggetti 'O', 'D' e 'S', possiamo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Sulla mia griglia, l'oggetto 'A' si trova in (6,6), ma poiché l'oggetto 'S' è stato spostato in (3,6), potrebbe essere necessario spostare l'oggetto 'A' per mantenerlo allineato con gli altri oggetti. Qual è la posizione dell'oggetto 'A' sulla tua griglia e come pensi di gestirlo? Dovremmo spostarlo o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+</div><div class="game-round" data-round="23">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Spostato 'S' in (3,6) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌◌◌║ 4
+║◌D◌OT┌─╢ 5
+║◌◌SP◌│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 23 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Ora che abbiamo completato gli spostamenti degli oggetti 'O', 'D' e 'S', possiamo valutare la posizione dell'oggetto 'A' e decidere se spostarlo o meno. Sulla mia griglia, l'oggetto 'A' si trova in (6,6), ma poiché l'oggetto 'S' è stato spostato in (3,6), potrebbe essere necessario spostare l'oggetto 'A' per mantenerlo allineato con gli altri oggetti. Qual è la posizione dell'oggetto 'A' sulla tua griglia e come pensi di gestirlo? Dovremmo spostarlo o lasciarlo nella sua posizione attuale?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sulla mia griglia, l'oggetto 'A' si trova in (4,1) e non è stato influenzato dagli spostamenti degli oggetti 'O', 'D' e 'S'. Considerando la posizione dell'oggetto 'A' sulla mia griglia e la posizione dell'oggetto 'A' sulla tua griglia, potrebbe essere necessario spostare l'oggetto 'A' sulla tua griglia per mantenerlo allineato con gli altri oggetti. Tuttavia, prima di prendere una decisione, vorrei discutere ulteriormente la posizione degli oggetti e assicurarmi che non ci siano altri oggetti che potrebbero essere influenzati da un possibile spostamento dell'oggetto 'A'. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' sulla tua griglia o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sulla mia griglia, l'oggetto 'A' si trova in (4,1) e non è stato influenzato dagli spostamenti degli oggetti 'O', 'D' e 'S'. Considerando la posizione dell'oggetto 'A' sulla mia griglia e la posizione dell'oggetto 'A' sulla tua griglia, potrebbe essere necessario spostare l'oggetto 'A' sulla tua griglia per mantenerlo allineato con gli altri oggetti. Tuttavia, prima di prendere una decisione, vorrei discutere ulteriormente la posizione degli oggetti e assicurarmi che non ci siano altri oggetti che potrebbero essere influenzati da un possibile spostamento dell'oggetto 'A'. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' sulla tua griglia o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 24 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sulla mia griglia, l'oggetto 'A' si trova in (4,1) e non è stato influenzato dagli spostamenti degli oggetti 'O', 'D' e 'S'. Considerando la posizione dell'oggetto 'A' sulla mia griglia e la posizione dell'oggetto 'A' sulla tua griglia, potrebbe essere necessario spostare l'oggetto 'A' sulla tua griglia per mantenerlo allineato con gli altri oggetti. Tuttavia, prima di prendere una decisione, vorrei discutere ulteriormente la posizione degli oggetti e assicurarmi che non ci siano altri oggetti che potrebbero essere influenzati da un possibile spostamento dell'oggetto 'A'. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' sulla tua griglia o lasciarlo nella sua posizione attuale?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che dovremmo discutere ulteriormente la posizione degli oggetti e assicurarmi che non ci siano altri oggetti che potrebbero essere influenzati da un possibile spostamento dell'oggetto 'A'. Sulla mia griglia, l'oggetto 'A' si trova in (6,6), vicino all'oggetto 'S' che è stato spostato in (3,6). Considerando la posizione degli oggetti 'T', 'P', 'O', 'D' e 'S', potrebbe essere necessario spostare l'oggetto 'A' per mantenerlo allineato con gli altri oggetti. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (4,2) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (4,2) o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che dovremmo discutere ulteriormente la posizione degli oggetti e assicurarmi che non ci siano altri oggetti che potrebbero essere influenzati da un possibile spostamento dell'oggetto 'A'. Sulla mia griglia, l'oggetto 'A' si trova in (6,6), vicino all'oggetto 'S' che è stato spostato in (3,6). Considerando la posizione degli oggetti 'T', 'P', 'O', 'D' e 'S', potrebbe essere necessario spostare l'oggetto 'A' per mantenerlo allineato con gli altri oggetti. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (4,2) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (4,2) o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+</div><div class="game-round" data-round="24">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 24 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te che dovremmo discutere ulteriormente la posizione degli oggetti e assicurarmi che non ci siano altri oggetti che potrebbero essere influenzati da un possibile spostamento dell'oggetto 'A'. Sulla mia griglia, l'oggetto 'A' si trova in (6,6), vicino all'oggetto 'S' che è stato spostato in (3,6). Considerando la posizione degli oggetti 'T', 'P', 'O', 'D' e 'S', potrebbe essere necessario spostare l'oggetto 'A' per mantenerlo allineato con gli altri oggetti. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (4,2) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (4,2) o lasciarlo nella sua posizione attuale?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che spostare l'oggetto 'A' in (4,2) potrebbe essere una buona opzione per mantenerlo allineato con gli altri oggetti. Tuttavia, sulla mia griglia, l'oggetto 'A' si trova già in (4,1), quindi potrei spostarlo in (4,2) per allineararlo con gli oggetti 'T', 'P', 'O', 'D' e 'S'. Questo spostamento sembra ragionevole e potrebbe aiutare a mantenere la coerenza della griglia. Sono d'accordo con te che dovremmo procedere con questo spostamento e valutare la posizione degli oggetti dopo averlo effettuato. Qual è la tua opinione su come procedere con lo spostamento dell'oggetto 'A' e come pensi di gestire la griglia dopo questo spostamento? Dovremmo effettuare lo spostamento dell'oggetto 'A' e poi valutare la posizione degli oggetti?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che spostare l'oggetto 'A' in (4,2) potrebbe essere una buona opzione per mantenerlo allineato con gli altri oggetti. Tuttavia, sulla mia griglia, l'oggetto 'A' si trova già in (4,1), quindi potrei spostarlo in (4,2) per allineararlo con gli oggetti 'T', 'P', 'O', 'D' e 'S'. Questo spostamento sembra ragionevole e potrebbe aiutare a mantenere la coerenza della griglia. Sono d'accordo con te che dovremmo procedere con questo spostamento e valutare la posizione degli oggetti dopo averlo effettuato. Qual è la tua opinione su come procedere con lo spostamento dell'oggetto 'A' e come pensi di gestire la griglia dopo questo spostamento? Dovremmo effettuare lo spostamento dell'oggetto 'A' e poi valutare la posizione degli oggetti?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 25 of maximum 28.
+You have collectively accumulated 2 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te che spostare l'oggetto 'A' in (4,2) potrebbe essere una buona opzione per mantenerlo allineato con gli altri oggetti. Tuttavia, sulla mia griglia, l'oggetto 'A' si trova già in (4,1), quindi potrei spostarlo in (4,2) per allineararlo con gli oggetti 'T', 'P', 'O', 'D' e 'S'. Questo spostamento sembra ragionevole e potrebbe aiutare a mantenere la coerenza della griglia. Sono d'accordo con te che dovremmo procedere con questo spostamento e valutare la posizione degli oggetti dopo averlo effettuato. Qual è la tua opinione su come procedere con lo spostamento dell'oggetto 'A' e come pensi di gestire la griglia dopo questo spostamento? Dovremmo effettuare lo spostamento dell'oggetto 'A' e poi valutare la posizione degli oggetti?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: A, (4,2)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: A, (4,2)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (4,2) non è vuoto, ma contiene '┼'.</p>
+<p>You have collectively accumulated 3 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Penalità: (4,2) non è vuoto, ma contiene '┼'.</p>
+<p>You have collectively accumulated 3 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Mi scuso per l'errore! Grazie per la penalità. Considerando la griglia, potrei spostare l'oggetto 'A' in una posizione diversa che sia vuota. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (5,2) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (5,2) o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Mi scuso per l'errore! Grazie per la penalità. Considerando la griglia, potrei spostare l'oggetto 'A' in una posizione diversa che sia vuota. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (5,2) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (5,2) o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+</div><div class="game-round" data-round="25">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 25 of maximum 28.
+You have collectively accumulated 3 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Mi scuso per l'errore! Grazie per la penalità. Considerando la griglia, potrei spostare l'oggetto 'A' in una posizione diversa che sia vuota. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (5,2) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (5,2) o lasciarlo nella sua posizione attuale?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che spostare l'oggetto 'A' in (5,2) potrebbe essere una buona opzione. Sulla mia griglia, la posizione (5,2) è vuota, quindi potresti spostare l'oggetto 'A' in quella posizione senza creare conflitti. Tuttavia, vorrei verificare se la posizione (5,2) sia conforme con la griglia globale e se non ci siano altri oggetti che potrebbero essere influenzati da questo spostamento. Prima di procedere, vorrei chiederti di confermare che la posizione (5,2) sia una scelta ragionevole e che non ci siano altre opzioni più adeguate. Sei sicuro che la posizione (5,2) sia la scelta migliore per l'oggetto 'A'?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che spostare l'oggetto 'A' in (5,2) potrebbe essere una buona opzione. Sulla mia griglia, la posizione (5,2) è vuota, quindi potresti spostare l'oggetto 'A' in quella posizione senza creare conflitti. Tuttavia, vorrei verificare se la posizione (5,2) sia conforme con la griglia globale e se non ci siano altri oggetti che potrebbero essere influenzati da questo spostamento. Prima di procedere, vorrei chiederti di confermare che la posizione (5,2) sia una scelta ragionevole e che non ci siano altre opzioni più adeguate. Sei sicuro che la posizione (5,2) sia la scelta migliore per l'oggetto 'A'?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 26 of maximum 28.
+You have collectively accumulated 3 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te che spostare l'oggetto 'A' in (5,2) potrebbe essere una buona opzione. Sulla mia griglia, la posizione (5,2) è vuota, quindi potresti spostare l'oggetto 'A' in quella posizione senza creare conflitti. Tuttavia, vorrei verificare se la posizione (5,2) sia conforme con la griglia globale e se non ci siano altri oggetti che potrebbero essere influenzati da questo spostamento. Prima di procedere, vorrei chiederti di confermare che la posizione (5,2) sia una scelta ragionevole e che non ci siano altre opzioni più adeguate. Sei sicuro che la posizione (5,2) sia la scelta migliore per l'oggetto 'A'?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: A, (5,2)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: A, (5,2)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (5,2) non è vuoto, ma contiene '─'.</p>
+<p>You have collectively accumulated 4 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Penalità: (5,2) non è vuoto, ma contiene '─'.</p>
+<p>You have collectively accumulated 4 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Mi scuso per l'errore! Grazie per la penalità. Considerando la griglia, potrei spostare l'oggetto 'A' in una posizione diversa che sia vuota. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (5,1) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (5,1) o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Mi scuso per l'errore! Grazie per la penalità. Considerando la griglia, potrei spostare l'oggetto 'A' in una posizione diversa che sia vuota. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (5,1) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (5,1) o lasciarlo nella sua posizione attuale?</p></p>
+    </div>
+</div><div class="game-round" data-round="26">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 26 of maximum 28.
+You have collectively accumulated 4 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Mi scuso per l'errore! Grazie per la penalità. Considerando la griglia, potrei spostare l'oggetto 'A' in una posizione diversa che sia vuota. Una possibile opzione potrebbe essere di spostare l'oggetto 'A' in (5,1) o in una posizione vicina. Tuttavia, vorrei sentire la tua opinione su questa possibilità e discutere ulteriormente la posizione degli oggetti prima di prendere una decisione. Qual è la tua opinione su come gestire l'oggetto 'A' e come pensi di procedere? Dovremmo spostare l'oggetto 'A' in (5,1) o lasciarlo nella sua posizione attuale?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che spostare l'oggetto 'A' in (5,1) potrebbe essere una buona opzione. Sulla mia griglia, la posizione (5,1) è vuota, quindi potresti spostare l'oggetto 'A' in quella posizione senza creare conflitti. Considerando la posizione degli oggetti 'T', 'P', 'O', 'D' e 'S', sembra che la griglia stia assumendo una forma coerente. Sono d'accordo con te che dovremmo procedere con questo spostamento e valutare la posizione degli oggetti dopo averlo effettuato. Qual è la tua opinione su come procedere con lo spostamento dell'oggetto 'A' e come pensi di gestire la griglia dopo questo spostamento? Dovremmo effettuare lo spostamento dell'oggetto 'A' e poi valutare se il gioco è completo?</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Sono d'accordo con te che spostare l'oggetto 'A' in (5,1) potrebbe essere una buona opzione. Sulla mia griglia, la posizione (5,1) è vuota, quindi potresti spostare l'oggetto 'A' in quella posizione senza creare conflitti. Considerando la posizione degli oggetti 'T', 'P', 'O', 'D' e 'S', sembra che la griglia stia assumendo una forma coerente. Sono d'accordo con te che dovremmo procedere con questo spostamento e valutare la posizione degli oggetti dopo averlo effettuato. Qual è la tua opinione su come procedere con lo spostamento dell'oggetto 'A' e come pensi di gestire la griglia dopo questo spostamento? Dovremmo effettuare lo spostamento dell'oggetto 'A' e poi valutare se il gioco è completo?</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 27 of maximum 28.
+You have collectively accumulated 4 of 16 penalties.
+L'altro giocatore ha inviato questo messaggio:</p>
+<p>"Sono d'accordo con te che spostare l'oggetto 'A' in (5,1) potrebbe essere una buona opzione. Sulla mia griglia, la posizione (5,1) è vuota, quindi potresti spostare l'oggetto 'A' in quella posizione senza creare conflitti. Considerando la posizione degli oggetti 'T', 'P', 'O', 'D' e 'S', sembra che la griglia stia assumendo una forma coerente. Sono d'accordo con te che dovremmo procedere con questo spostamento e valutare la posizione degli oggetti dopo averlo effettuato. Qual è la tua opinione su come procedere con lo spostamento dell'oggetto 'A' e come pensi di gestire la griglia dopo questo spostamento? Dovremmo effettuare lo spostamento dell'oggetto 'A' e poi valutare se il gioco è completo?"</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>SPOSTA: A, (5,1)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: A, (5,1)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'A' in (5,1) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│A│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║◌D◌O◌┌─╢ 5
+║◌◌ST◌│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+</div><div class="game-round" data-round="27">
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Il tuo messaggio è stato inoltrato all'altro giocatore.</p>
+<p>You are currently playing round 27 of maximum 28.
+You have collectively accumulated 4 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: A, (4,2)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: A, (4,2)</p></p>
+    </div>
+
+    <div speaker="Game Master: invalid move" class="msg gm-gm" style="">
+        <p><p>Penalità: (4,2) non è vuoto, ma contiene '┼'.</p>
+<p>You have collectively accumulated 5 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 1 (GridCleaner)" class="msg gm-player p1" style="">
+        <p><p>Penalità: (4,2) non è vuoto, ma contiene '┼'.</p>
+<p>You have collectively accumulated 5 of 16 penalties.
+Riprova!</p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to Player 1 (GridCleaner)" class="msg player-player p1" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 1 (GridCleaner) to GM (Game Master)" class="msg player-gm p1" style="">
+        <p><p>SPOSTA: A, (5,1)</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>SPOSTA: A, (5,1)</p></p>
+    </div>
+
+    <div speaker="Game Master: valid move" class="msg gm-gm" style="">
+        <p><p>Spostato 'A' in (5,1) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│A│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3
+╟───┘◌◌◌║ 4
+║◌D◌OT┌─╢ 5
+║◌◌SP◌│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre></p>
+    </div>
+
+    <div speaker="GM (Game Master) to Player 2 (GridCleaner)" class="msg gm-player p2" style="">
+        <p><p>Spostato 'A' in (5,1) con successo. La tua griglia aggiornata appare così:</p>
+<pre><code> 1234567
+╔═╤═╤═╤═╗
+║◌│◌│A│◌║ 1
+╟─┴─┼─┤◌║ 2
+║◌M◌│◌└─╢ 3
+╟───┘P◌◌║ 4
+║◌D◌O◌┌─╢ 5
+║◌◌ST◌│◌║ 6
+║◌◌◌◌◌│◌║ 7
+╚═════╧═╝
+</code></pre>
+<p>You are currently playing round 28 of maximum 28.
+You have collectively accumulated 5 of 16 penalties.
+L'altro giocatore ha spostato un oggetto sulla sua griglia.</p>
+<p>Qual è il tuo prossimo comando?</p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to Player 2 (GridCleaner)" class="msg player-player p2" style="">
+        <p></p>
+    </div>
+
+    <div speaker="Player 2 (GridCleaner) to GM (Game Master)" class="msg player-gm p2" style="">
+        <p><p>COMUNICA: Finito!</p></p>
+    </div>
+
+    <div speaker="Game Master: player_response" class="msg gm-gm" style="">
+        <p><p>COMUNICA: Finito!</p></p>
+    </div>
+
+    <div speaker="Game Master: end" class="msg gm-gm" style="">
+        <p><p>Maximum number of rounds reached</p></p>
+    </div>
+
+    <div speaker="Game Master: game_finished" class="msg gm-gm" style="">
+        <p><ul>
+<li>success: True</li>
+<li>lose: False</li>
+<li>aborted: False</li>
+</ul>
+<hr />
+<ul>
+<li>Shifts: 4.00</li>
+<li>Max Shifts: 12.00</li>
+<li>Min Shifts: 6.00</li>
+<li>End Distance Sum: 4.65</li>
+<li>Init Distance Sum: 18.94</li>
+<li>Expected Distance Sum: 29.33</li>
+<li>Penalties: 5.00</li>
+<li>Max Penalties: 16.00</li>
+<li>Rounds: 28.00</li>
+<li>Max Rounds: 28.00</li>
+<li>Object Count: 7.00</li>
+</ul></p>
+    </div>
+
+    <div speaker="Game Master: grid logs" class="msg gm-gm" style="">
+        <p><p>Initial Grids:</p>
+<pre><code>Player 1:     Player 2:
+ 1234567       1234567
+╔═╤═╤═╤═╗     ╔═╤═╤═╤═╗
+║◌│◌│◌│A║ 1   ║◌│◌│◌│◌║ 1
+╟─┴─┼─┤◌║ 2   ╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3   ║◌M◌│◌└─╢ 3
+╟───┘◌S◌║ 4   ╟───┘P◌◌║ 4
+║◌◌◌◌◌┌─╢ 5   ║O◌◌◌◌┌─╢ 5
+║◌◌◌PT│O║ 6   ║◌D◌◌A│S║ 6
+║◌D◌◌◌│◌║ 7   ║◌◌◌◌T│◌║ 7
+╚═════╧═╝     ╚═════╧═╝
+</code></pre>
+<p>Final Grids:</p>
+<pre><code>Player 1:     Player 2:
+ 1234567       1234567
+╔═╤═╤═╤═╗     ╔═╤═╤═╤═╗
+║◌│◌│A│◌║ 1   ║◌│◌│A│◌║ 1
+╟─┴─┼─┤◌║ 2   ╟─┴─┼─┤◌║ 2
+║◌◌M│◌└─╢ 3   ║◌M◌│◌└─╢ 3
+╟───┘◌◌◌║ 4   ╟───┘P◌◌║ 4
+║◌D◌OT┌─╢ 5   ║◌D◌O◌┌─╢ 5
+║◌◌SP◌│◌║ 6   ║◌◌ST◌│◌║ 6
+║◌◌◌◌◌│◌║ 7   ║◌◌◌◌◌│◌║ 7
+╚═════╧═╝     ╚═════╧═╝
+</code></pre></p>
+    </div>
+</div>
+</div>
+
+</body>
+</html>
