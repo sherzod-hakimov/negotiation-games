@@ -2,68 +2,68 @@ import pandas as pd
 
 MODEL_PROPERTIES = {
     "claude-sonnet-4-20250514-no-reasoning-t1.0": {  # what does the t1.0 mean here? 
-        "commercial": "Y",
-        "reasoning": "N",        
+        "Model Type": "commercial",
+        "reasoning": "No",        
     }, 
     "claude-sonnet-4-20250514-t1.0": {
-        "commercial": "Y",
-        "reasoning": "N",                
+        "Model Type": "commercial",
+        "reasoning": "No",                
     },
     "claude-sonnet-4-20250514-no-reasoning-t0.0": {
-        "commercial": "Y",
-        "reasoning": "N",
+        "Model Type": "commercial",
+        "reasoning": "No",
     }, 
     "claude-sonnet-4-20250514-t0.0": {
-        "commercial": "Y",
-        "reasoning": "Y",
+        "Model Type": "commercial",
+        "reasoning": "Yes",
     }, 
     "gpt-5-2025-08-07-no-reasoning-t1.0": {
-        "commercial": "Y",
-        "reasoning": "N",
+        "Model Type": "commercial",
+        "reasoning": "No",
     },
     "gpt-5-2025-08-07-t1.0": {
-        "commercial": "Y",
-        "reasoning": "Y",
+        "Model Type": "commercial",
+        "reasoning": "Yes",
     },
     "gpt-5-mini-2025-08-07-no-reasoning-t1.0": {
-        "commercial": "Y",
-        "reasoning": "N",
+        "Model Type": "commercial",
+        "reasoning": "No",
     },
     "gpt-5-mini-2025-08-07-t1.0": {
-        "commercial": "Y",
-        "reasoning": "Y",
+        "Model Type": "commercial",
+        "reasoning": "Yes",
     },
     "llama-3.3-70b-instruct-t1.0": {
-        "commercial": "N",
-        "reasoning": "N",
+        "Model Type": "open-weight",
+        "reasoning": "No",
     },
     "deepseek-r1-distill-llama-70b-t1.0": {
-        "commercial": "N",
-        "reasoning": "Y",
+        "Model Type": "open-weight",
+        "reasoning": "Yes",
     },
     "nemotron-nano-9b-v2-no-reasoning-t1.0": {
-        "commercial": "N",
-        "reasoning": "N",
+        "Model Type": "open-weight",
+        "reasoning": "No",
     },
     "nemotron-nano-9b-v2-t1.0": {
-        "commercial": "N",
-        "reasoning": "Y",
+        "Model Type": "open-weight",
+        "reasoning": "Yes",
     }, 
     "gpt-oss-120b-t1.0": {
-        "commercial": "N", 
-        "reasoning": "Y"
+        "Model Type": "open-weight", 
+        "reasoning": "Yes"
     }, 
     "qwen3-next-80b-a3b-thinking-t1.0": {
-        "commercial": "N", 
-        "reasoning": "Y"
+        "Model Type": "open-weight", 
+        "reasoning": "Yes"
     }, 
     "qwen3-next-80b-a3b-instruct-t1.0": {
-        "commercial": "N", 
-        "reasoning": "N"
+        "Model Type": "open-weight", 
+        "reasoning": "No"
     }, 
     "deepseek-chat-v3.1-t1.0": {
-        "commercial": "N", 
-        "reasoning": "?"
+        "Model Type": "open-weight", 
+        "reasoning": "No"
     }, 
     
 }
@@ -71,7 +71,7 @@ MODEL_PROPERTIES = {
 
 def transform(df): 
     # add / drop columns
-    df[["commercial", "reasoning"]] = df["model"].map(MODEL_PROPERTIES).apply(pd.Series)
+    df[["Model Type", "reasoning"]] = df["model"].map(MODEL_PROPERTIES).apply(pd.Series)
     df = df.drop(['Unnamed: 0'], axis=1)    
 
     # drop rows
@@ -81,7 +81,7 @@ def transform(df):
     df = df.loc[df['metric'].isin(to_keep)]
 
     df_pv = df.pivot_table(
-            index=["game", "model", "experiment", "episode", "commercial", "reasoning"],
+            index=["game", "model", "experiment", "episode", "Model Type", "reasoning"],
             columns="metric",
             values="value",
             aggfunc="first" # no actual aggregation will happen 
