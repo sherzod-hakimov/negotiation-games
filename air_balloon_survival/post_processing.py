@@ -1,6 +1,7 @@
 import os
 import json
 import ast
+import re
 from itertools import chain, combinations
 
 def extract_summary(log_file: str, game_instance_file: str, output_file: str):
@@ -13,8 +14,46 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
     p1_prefs = game_instance["player1_preferences"]
     p2_prefs = game_instance["player2_preferences"]
 
-    pareto_sets = [frozenset(s) for s in game_instance.get("pareto_optima_sets", [])] \
-                  if not game_instance.get("only_individual", False) else None
+    # regex tags from instance.json
+    proposal_tag = game_instance["proposal_tag"]
+    agree_tag = game_instance["agree_tag"]
+    refusal_tag = game_instance["refusal_tag"]
+
+    # --- Compute Pareto sets ---
+    n_items = len(item_weights)
+    given_sets = game_instance.get("pareto_optima_sets", [])
+
+    if given_sets:  # use provided Pareto sets
+        pareto_sets = [frozenset(s) for s in given_sets]
+    elif n_items <= 15:  # compute if feasible
+        def all_subsets(iterable):
+            s = list(iterable)
+            return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+
+        def evaluate_set(items):
+            total_weight = sum(item_weights.get(i, 0) for i in items)
+            u1 = sum(p1_prefs.get(i, 0) for i in items)
+            u2 = sum(p2_prefs.get(i, 0) for i in items)
+            return total_weight, u1, u2
+
+        all_candidates = []
+        for subset in all_subsets(item_weights.keys()):
+            total_weight, u1, u2 = evaluate_set(subset)
+            if total_weight <= game_instance["max_weight"]:
+                all_candidates.append((frozenset(subset), u1, u2))
+
+        # filter Pareto frontier
+        pareto_sets = []
+        for s, u1, u2 in all_candidates:
+            dominated = False
+            for _, v1, v2 in all_candidates:
+                if v1 >= u1 and v2 >= u2 and (v1 > u1 or v2 > u2):
+                    dominated = True
+                    break
+            if not dominated:
+                pareto_sets.append(s)
+    else:  # too many items
+        pareto_sets = None
 
     def is_pareto(items):
         if pareto_sets is None:
@@ -28,7 +67,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         return total_weight, u1, u2
 
     def score_set(items):
-        """Return full scoring dict for a proposal/agreement set."""
+        """Return full scoring dict for a proposal/agreement/refusal set."""
         total_weight, u1, u2 = evaluate_set(items)
 
         normalized_u1 = (u1 / game_instance["max_u1"] * 100) if game_instance["max_u1"] > 0 else float("NaN")
@@ -78,15 +117,15 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
             v_i = values[item]
             for w in range(max_weight + 1):
                 if w_i > w:
-                    dp[i][w] = dp[i-1][w]
+                    dp[i][w] = dp[i - 1][w]
                 else:
-                    dp[i][w] = max(dp[i-1][w], dp[i-1][w - w_i] + v_i)
+                    dp[i][w] = max(dp[i - 1][w], dp[i - 1][w - w_i] + v_i)
 
         selected_items = set()
         w = max_weight
         for i in range(n, 0, -1):
-            if dp[i][w] != dp[i-1][w]:
-                item = item_list[i-1]
+            if dp[i][w] != dp[i - 1][w]:
+                item = item_list[i - 1]
                 selected_items.add(item)
                 w -= weights[item]
 
@@ -97,43 +136,56 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         "results_folder": log_data["meta"]["results_folder"],
         "game_id": log_data["meta"]["game_id"],
         "proposals": [],
+        "refusals": [],
         "agreement": None,
         "max_weight": game_instance["max_weight"],
         "scores": {}
     }
 
     turns = 0
-    final_deal = None
-
     for turn in log_data["turns"]:
         turns += 1
         for event in turn:
-            if event["action"]["type"] == "get message":
-                response = event["action"]["content"]
-                actor = event["from"]
+            if (event["from"] == "GM"
+                and isinstance(event["action"].get("content"), str)
+            ):
 
-                if "PROPOSAL:" in response:
-                    try:
-                        set_str = response.split("PROPOSAL:", 1)[1].split("\n", 1)[0].strip()
+                # --- Proposals ---
+                response = event["action"]["content"]
+                # the actor is the one who sent the message to GM so not the receiver
+                actor = "Player 1" if event["to"] == "Player 2" else "Player 2"
+
+                try:
+                    proposals_found = re.findall(proposal_tag, response, flags=re.DOTALL)
+                    proposals_found = [p for p in proposals_found if "{'A', 'B', 'C'}" not in p]
+                    for match in proposals_found:
+                        set_str = match.split(":", 1)[1].strip()
                         proposal = ast.literal_eval(set_str)
                         scored = score_set(proposal)
                         scored["by"] = actor
                         scored["turn"] = turns
                         summary["proposals"].append(scored)
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
 
-                if "AGREE:" in response:
-                    try:
-                        set_str = response.split("AGREE:", 1)[1].split("\n", 1)[0].strip()
-                        agreement = ast.literal_eval(set_str)
-                        final_deal = agreement
-                        scored = score_set(agreement)
+                # --- Refusals ---
+                try:
+                    refusals_found = re.findall(refusal_tag, response, flags=re.DOTALL)
+                    for match in refusals_found:
+                        set_str = match.split(":", 1)[1].strip()
+                        refusal = ast.literal_eval(set_str)
+                        scored = score_set(refusal)
                         scored["by"] = actor
                         scored["turn"] = turns
-                        summary["agreement"] = scored
-                    except Exception:
-                        pass
+                        summary["refusals"].append(scored)
+                except Exception:
+                    pass
+
+    if log_data["final deal"]:
+        scored_agreement = score_set(log_data["final deal"])
+        scored_agreement["by"] = "Player"
+        scored_agreement["turn"] = turns
+        summary["agreement"] = scored_agreement
 
     # Store maxima
     summary["max_u1"] = game_instance.get("max_u1")
@@ -142,9 +194,61 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
 
     # Ensure proposals are sorted temporally
     summary["proposals"] = sorted(summary["proposals"], key=lambda x: x["turn"])
+    summary["nb_proposals"] = len(summary["proposals"])
 
-    # Compute final deal scores
-    if final_deal:
+    # --- Compute Pareto adherence rate ---
+    pareto_flags = [p.get("pareto_optimum", None) for p in summary["proposals"]]
+    valid_flags = [flag for flag in pareto_flags if flag is not None]
+    pareto_adherence_rate = (
+        sum(flag is True for flag in valid_flags) / len(valid_flags)
+        if valid_flags else None
+    )
+
+    # --- Alternation rate ---
+    alternations = 0
+    proposers = [p["by"] for p in summary["proposals"]]
+    for i in range(1, len(proposers)):
+        if proposers[i] != proposers[i - 1]:
+            alternations += 1
+    alternation_rate = (
+        alternations / (len(proposers) - 1)
+        if len(proposers) > 1 else None
+    )
+
+    # --- Normalized substitutions ---
+    normalized_changes = []
+    for i in range(1, len(summary["proposals"])):
+        prev_items = set(summary["proposals"][i - 1]["items"])
+        curr_items = set(summary["proposals"][i]["items"])
+        subs = len(prev_items ^ curr_items)
+        prev_size = len(prev_items) if len(prev_items) > 0 else 1
+        normalized_changes.append(subs / prev_size)
+
+    avg_normalized_subs = float(sum(normalized_changes) / len(normalized_changes)) if normalized_changes else None
+    summary["normalized_substitutions_per_proposal"] = normalized_changes
+
+    # --- Stubbornness ---
+    stubbornness = {"Player 1": None, "Player 2": None}
+    total_repeats = 0
+    total_props = len(summary["proposals"])
+
+    for player in ["Player 1", "Player 2"]:
+        player_props = [tuple(p["items"]) for p in summary["proposals"] if p["by"] == player]
+        if player_props:
+            seen = set()
+            repeats = 0
+            for prop in player_props:
+                if prop in seen:
+                    repeats += 1
+                else:
+                    seen.add(prop)
+            stubbornness[player] = repeats / len(player_props)
+            total_repeats += repeats
+
+    stubbornness_total = (total_repeats / total_props) if total_props > 0 else None
+
+    # --- Final deal scores ---
+    if log_data["final deal"]:
         summary["scores"] = {
             "player1_score": summary["agreement"]["utility_player1"],
             "player2_score": summary["agreement"]["utility_player2"],
@@ -154,9 +258,24 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
             "normalized_harmonic_mean": summary["agreement"]["normalized_harmonic_mean"],
             "episode_score": 100.0 / turns if turns > 0 else 100.0,
             "pareto_optimum": summary["agreement"]["pareto_optimum"],
+            "pareto_adherence_rate": pareto_adherence_rate,
+            "alternation_rate": alternation_rate,
+            "avg_normalized_substitutions": avg_normalized_subs,
+            "stubbornness_player1": stubbornness["Player 1"],
+            "stubbornness_player2": stubbornness["Player 2"],
+            "stubbornness_total": stubbornness_total,
         }
+    else:
+        summary["scores"].update({
+            "pareto_adherence_rate": pareto_adherence_rate,
+            "alternation_rate": alternation_rate,
+            "avg_normalized_substitutions": avg_normalized_subs,
+            "stubbornness_player1": stubbornness["Player 1"],
+            "stubbornness_player2": stubbornness["Player 2"],
+            "stubbornness_total": stubbornness_total,
+        })
 
-    # Individual optima
+    # --- Individual optima ---
     best_u1, set_u1 = dp_pseudo_poly_knapsack(item_weights, p1_prefs, game_instance["max_weight"])
     best_u2, set_u2 = dp_pseudo_poly_knapsack(item_weights, p2_prefs, game_instance["max_weight"])
 
@@ -173,40 +292,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
         "pareto_optimum": is_pareto(set_u2),
     }
 
-    # Global optimum
-    if not game_instance.get("only_individual", False):
-        item_list = list(item_weights.keys())
-        best_set = set()
-        best_score = -1
-
-        def all_subsets(iterable):
-            s = list(iterable)
-            return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
-
-        for subset in all_subsets(item_list):
-            total_weight, u1, u2 = evaluate_set(subset)
-            if total_weight > game_instance["max_weight"]:
-                continue
-
-            norm_u1 = (u1 / game_instance["max_u1"] * 100) if game_instance["max_u1"] > 0 else 0
-            norm_u2 = (u2 / game_instance["max_u2"] * 100) if game_instance["max_u2"] > 0 else 0
-
-            harmonic = 2 * (norm_u1 * norm_u2) / (norm_u1 + norm_u2) if (norm_u1 + norm_u2) > 0 else 0
-
-            if harmonic > best_score:
-                best_score = harmonic
-                best_set = set(subset)
-
-        summary["global_optimum"] = {
-            "items": sorted(list(best_set)),
-            "utility_player1": sum(p1_prefs[i] for i in best_set),
-            "utility_player2": sum(p2_prefs[i] for i in best_set),
-            "harmonic_mean": best_score,
-            "pareto_optimum": is_pareto(best_set),
-        }
-    else:
-        summary["global_optimum"] = None  # not applicable
-
+    # Save JSON
     with open(output_file, "w") as f:
         json.dump(summary, f, indent=2)
 
@@ -250,4 +336,6 @@ if __name__ == "__main__":
     base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_en"))
     traverse_results(base_path)
     base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_de"))
+    traverse_results(base_path)
+    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_it"))
     traverse_results(base_path)
