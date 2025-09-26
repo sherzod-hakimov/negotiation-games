@@ -271,6 +271,15 @@ def traverse_and_plot(base_path: str):
 
 if __name__ == "__main__":
 
-    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_en"))
+    if __name__ == "__main__":
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+        for lang in ["results_en", "results_it", "results_de"]:
+            base_path = os.path.join(base_dir, lang)
+            if os.path.exists(base_path):
+                print(f"\n--- Processing {lang} ---")
+                traverse_and_plot(base_path)
+            else:
+                print(f"⚠️ {base_path} does not exist, skipping.")
 
     traverse_and_plot(base_path)
