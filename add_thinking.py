@@ -1,4 +1,5 @@
 from copy import deepcopy
+from email.mime import base
 import json
 import os
 
@@ -10,12 +11,13 @@ def find_experiment_dirs(base_dir: str, game_name: str = ""):
     print(  f"found {len(experiment_dirs)} experiment dirs in {base_dir} with game_name '{game_name}'"  )
     return experiment_dirs
 
-def think_event(player: str, thinking: str):
+def think_event(player: str, thinking: str, timestamp: str = ""):
     if not thinking:
         thinking = ""
     thinking_event = {
         "from": player,
         "to": player,
+        "timestamp": timestamp,
         "action": {
             "type": "thinking",
             "content": thinking,
@@ -50,14 +52,14 @@ def thinking_to_interactions(experiment_dir: str):
                             if "thinking" in raw_response_content[0]:
                                 thinking_found = True
                                 thinking = raw_response_content[0]["thinking"]
-                                thinking_event = think_event(event["from"], thinking)
+                                thinking_event = think_event(event["from"], thinking, timestamp)
                                 new_interactions["turns"][-1].append(thinking_event)
                         elif "choices" in raw_response_object:
                             message = raw_response_object["choices"][0]["message"]
                             if "reasoning" in message:
                                 thinking_found = True
                                 thinking = message["reasoning"]
-                                thinking_event = think_event(event["from"], thinking)
+                                thinking_event = think_event(event["from"], thinking, timestamp)
                                 if "error" in raw_response_object["choices"][0]:
                                     thinking_event["action"]["content"] += f"\nERROR: {raw_response_object['choices'][0]['error']['message']}"
                                 new_interactions["turns"][-1].append(thinking_event)
@@ -65,7 +67,7 @@ def thinking_to_interactions(experiment_dir: str):
 
     if thinking_found:
         with open(os.path.join(experiment_dir, "interactions_with_thinking.json"), "w") as f:
-            json.dump(new_interactions, f, indent=4)
+            json.dump(new_interactions, f, indent=4, ensure_ascii=False)
 
 if __name__ == "__main__":
     epxeriment_roots = [
