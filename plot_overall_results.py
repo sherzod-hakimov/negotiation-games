@@ -270,10 +270,20 @@ def sort_models_by_global_avg(wide: pd.DataFrame, bucket_order: list[str]) -> li
 def plot_grouped_bars(wide: pd.DataFrame, game: str, lang: str, outdir: str):
     """
     One chart per game per language. Bars grouped by difficulty bucket.
+    Fonts and sizing are defined locally for LaTeX-friendly output.
     """
     if wide.empty:
         print(f"[{lang}] {game}: no data to plot.")
         return
+
+    # --- Local font + size config ---
+    FONTS = {
+        "title": 25,   # figure title
+        "label": 20,   # axis labels
+        "ticks": 18,   # tick labels
+        "legend": 16,  # legend text
+    }
+    DPI = 200
 
     cfg = GAME_CONFIG[game]
     order = cfg["order"]
@@ -284,7 +294,11 @@ def plot_grouped_bars(wide: pd.DataFrame, game: str, lang: str, outdir: str):
     n_buckets = len(order)
     bar_width = 0.8 / max(n_buckets, 1)
 
-    plt.figure(figsize=(max(10, 1.2 * len(models_sorted)), 6))
+    # Wider & taller for clearer y-axis in LaTeX
+    fig_width = max(10, 1.2 * len(models_sorted))
+    fig_height = 10  # increase from 6 to ~8.5"
+    plt.figure(figsize=(fig_width, fig_height), dpi=DPI)
+
     handles = []
     labels = []
 
@@ -294,16 +308,23 @@ def plot_grouped_bars(wide: pd.DataFrame, game: str, lang: str, outdir: str):
         handles.append(bars[0])
         labels.append(bucket)
 
-    plt.xticks(x + (n_buckets - 1) * bar_width / 2, models_sorted, rotation=45, ha="right")
-    plt.ylabel(cfg["ylabel"])
-    pretty_game = {"hot_air_balloon":"Air Balloon Survival", "clean_up":"Clean Up", "dond":"DoND"}.get(game, game)
-    plt.title(f"{pretty_game} — {lang.upper()}")
-    plt.legend(handles, labels)
-    plt.tight_layout()
+    plt.xticks(
+        x + (n_buckets - 1) * bar_width / 2,
+        models_sorted,
+        rotation=45,
+        ha="right",
+        fontsize=FONTS["ticks"],
+    )
+    plt.yticks(fontsize=FONTS["ticks"])
+    plt.ylabel(cfg["ylabel"], fontsize=FONTS["label"])
+    pretty_game = {"hot_air_balloon": "Hot Air Balloon", "clean_up": "Clean Up", "dond": "DoND"}.get(game, game)
+    plt.title(f"{pretty_game} — {lang.upper()}", fontsize=FONTS["title"])
+    plt.legend(handles, labels, fontsize=FONTS["legend"])
 
+    plt.tight_layout()
     out_path = Path(outdir) / f"{game}_{lang}.pdf"
     Path(outdir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(out_path)
+    plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     print(f"Saved {out_path}")
 
