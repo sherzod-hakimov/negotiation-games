@@ -296,7 +296,7 @@ def plot_grouped_bars(wide: pd.DataFrame, game: str, lang: str, outdir: str):
 
     plt.xticks(x + (n_buckets - 1) * bar_width / 2, models_sorted, rotation=45, ha="right")
     plt.ylabel(cfg["ylabel"])
-    pretty_game = {"hot_air_balloon":"Hot Air Balloon", "clean_up":"Clean Up", "dond":"DoND"}.get(game, game)
+    pretty_game = {"hot_air_balloon":"Air Balloon Survival", "clean_up":"Clean Up", "dond":"DoND"}.get(game, game)
     plt.title(f"{pretty_game} — {lang.upper()}")
     plt.legend(handles, labels)
     plt.tight_layout()
