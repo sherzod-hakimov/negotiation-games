@@ -157,7 +157,7 @@ def extract_summary(log_file: str, game_instance_file: str, output_file: str):
 
                 try:
                     proposals_found = re.findall(proposal_tag, response, flags=re.DOTALL)
-                    proposals_found = [p for p in proposals_found if "{'A', 'B', 'C'}" not in p]
+                    proposals_found = [p for p in proposals_found if "{'A', 'B', 'C'" not in p]
                     for match in proposals_found:
                         set_str = match.split(":", 1)[1].strip()
                         proposal = ast.literal_eval(set_str)

@@ -211,7 +211,7 @@ def plot_summary(summary_file, make_imbalance=False):
                 instance_data = json.load(f)
                 only_individual = instance_data.get("only_individual", False)
         except Exception as e:
-            print(f"⚠️ Failed to load {instance_file}: {e}")
+            print(f"Failed to load {instance_file}: {e}")
 
     # --- Always plot total score ---
     save_path_score = os.path.join(base_dir, "score_plot.png")
@@ -280,6 +280,6 @@ if __name__ == "__main__":
                 print(f"\n--- Processing {lang} ---")
                 traverse_and_plot(base_path)
             else:
-                print(f"⚠️ {base_path} does not exist, skipping.")
+                print(f"{base_path} does not exist, skipping.")
 
     traverse_and_plot(base_path)
