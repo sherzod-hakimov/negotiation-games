@@ -1,10 +1,14 @@
-import os
-import json
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-# Mapping raw model names to short readable names
+import os
+import re
+import json
+from pathlib import Path
+from collections import defaultdict
+from typing import Optional, Dict, Any, Iterable
+
+# -------- model pretty names (as provided) --------
 MODEL_NAME_MAP = {
     # GPT-5 family
     "gpt-5-2025-08-07-t1.0": "GPT-5 (reasoning)",
@@ -37,150 +41,159 @@ MODEL_NAME_MAP = {
     "gpt-oss-120b-t1.0": "GPT-OSS 120B",
 }
 
-def pretty_model_name(raw_name: str) -> str:
-    return MODEL_NAME_MAP.get(raw_name, raw_name)  # fallback if unmapped
+LANG_DIRS = ["results_en", "results_de", "results_it"]
+GAME_NAME = "hot_air_balloon"
+TARGET_TYPES = ("missing tag", "rule violation")  # print in this order
 
+# -------- helpers --------
+def find_repo_root(start: Path) -> Path:
+    """Walk up until we see any results_* directory; else use CWD."""
+    p = start.resolve()
+    while True:
+        if any((p / d).exists() for d in LANG_DIRS):
+            return p
+        if p.parent == p:
+            return start.resolve()
+        p = p.parent
 
-def collect_scores(base_paths):
-    # experiment_type -> model_pretty -> { "score_sum": ..., "count": ..., "total_games": ... }
-    data = defaultdict(lambda: defaultdict(lambda: {"score_sum": 0.0, "count": 0, "total_games": 0}))
+def iter_interaction_files(results_dir: Path) -> Iterable[Path]:
+    yield from results_dir.glob("**/interactions.json")
 
-    for base_path in base_paths:
-        for model in os.listdir(base_path):
-            model_path = os.path.join(base_path, model)
-            if not os.path.isdir(model_path):
+def load_json(path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+def flatten_turns(turns):
+    for round_msgs in turns or []:
+        if isinstance(round_msgs, list):
+            for msg in round_msgs:
+                yield msg
+
+def norm_type(s: Optional[str]) -> str:
+    if not s:
+        return ""
+    return s.replace("_", " ").strip().lower()
+
+# --- model normalization + mapping ---
+_model_keys = list(MODEL_NAME_MAP.keys())
+
+_suffix_re = re.compile(r"-t\d+(?:\.\d+)?$")
+
+def normalize_model_string(s: str) -> str:
+    """basename, strip trailing '/', normalize case minimally, strip -tX[.Y] suffix."""
+    base = os.path.basename(str(s).strip().rstrip("/"))
+    # keep original case for exact match, but prepare a variant without -tX.Y
+    return base
+
+def strip_t_suffix(s: str) -> str:
+    return _suffix_re.sub("", s)
+
+def map_to_known_model(raw: str) -> str:
+    """
+    Try to map a raw results_folder string to a known MODEL_NAME_MAP key.
+    Strategy:
+      1) exact match
+      2) match after stripping -tX[.Y]
+      3) longest-prefix match vs known keys (on both raw and stripped forms)
+    If none match, return the original raw.
+    """
+    candidate = normalize_model_string(raw)
+    # 1) exact
+    if candidate in MODEL_NAME_MAP:
+        return candidate
+    # 2) strip -t suffix and try again
+    stripped = strip_t_suffix(candidate)
+    if stripped in MODEL_NAME_MAP:
+        return stripped
+    # 3) longest-prefix match
+    #    e.g., raw="deepseek-chat-v3.1" should map to key "deepseek-chat-v3.1-t1.0"
+    best = None
+    for key in _model_keys:
+        if candidate.startswith(key) or key.startswith(candidate):
+            if best is None or len(key) > len(best):
+                best = key
+        if stripped and (stripped.startswith(key) or key.startswith(stripped)):
+            if best is None or len(key) > len(best):
+                best = key
+    return best if best else raw
+
+def pretty_model_name(mapped_key_or_raw: str) -> str:
+    return MODEL_NAME_MAP.get(mapped_key_or_raw, mapped_key_or_raw)
+
+# -------- main --------
+def main():
+    repo_root = find_repo_root(Path(os.getcwd()))
+
+    # Initialize counts with ALL mapped models so zeros show
+    counts_by_key = {k: {t: 0 for t in TARGET_TYPES} for k in MODEL_NAME_MAP.keys()}
+    extras = set()
+    scanned_files = 0
+
+    for lang_dir in LANG_DIRS:
+        base = repo_root / lang_dir
+        if not base.exists():
+            continue
+        for path in iter_interaction_files(base):
+            data = load_json(path)
+            if not data:
                 continue
 
-            hot_air_path = os.path.join(model_path, "hot_air_balloon")
-            if not os.path.exists(hot_air_path):
+            meta = data.get("meta", {}) or {}
+            if (meta.get("game_name") or "").strip() != GAME_NAME:
                 continue
 
-            pretty_name = pretty_model_name(model)
+            scanned_files += 1
+            raw_folder = meta.get("results_folder") or "unknown_model"
+            mapped_key = map_to_known_model(raw_folder)
+            if mapped_key not in counts_by_key:
+                counts_by_key.setdefault(mapped_key, {t: 0 for t in TARGET_TYPES})
+                if mapped_key not in MODEL_NAME_MAP:
+                    extras.add(mapped_key)
 
-            for experiment in os.listdir(hot_air_path):
-                exp_path = os.path.join(hot_air_path, experiment)
-                if not os.path.isdir(exp_path):
-                    continue
+            for msg in flatten_turns(data.get("turns")):
+                if msg.get("from") == "GM" and msg.get("to") == "GM":
+                    a_type = norm_type((msg.get("action") or {}).get("type"))
+                    if a_type in TARGET_TYPES:
+                        key = "missing tag" if a_type == "missing tag" else "rule violation"
+                        counts_by_key[mapped_key][key] += 1
 
-                # experiment type = everything before "_easy"/"_hard"
-                if experiment.endswith("_easy"):
-                    exp_type = experiment[:-5]
-                elif experiment.endswith("_hard"):
-                    exp_type = experiment[:-5]
-                else:
-                    continue
+    if scanned_files == 0:
+        print("(no hot_air_balloon interactions.json files found under results_en/de/it)")
+        return
 
-                instances = [inst for inst in os.listdir(exp_path) if os.path.isdir(os.path.join(exp_path, inst))]
-                total_games = len(instances)
+    # Order: all mapped models (pretty sorted), then extras (pretty sorted)
+    mapped_rows = []
+    for key in MODEL_NAME_MAP.keys():
+        c = counts_by_key.get(key, {t: 0 for t in TARGET_TYPES})
+        mapped_rows.append((pretty_model_name(key), key, c["missing tag"], c["rule violation"]))
+    mapped_rows.sort(key=lambda r: r[0].lower())
 
-                for instance in instances:
-                    inst_path = os.path.join(exp_path, instance)
-                    summary_file = os.path.join(inst_path, "summary.json")
-                    if not os.path.exists(summary_file):
-                        continue
+    extra_rows = []
+    for key in sorted(extras, key=lambda k: pretty_model_name(k).lower()):
+        c = counts_by_key.get(key, {t: 0 for t in TARGET_TYPES})
+        extra_rows.append((pretty_model_name(key), key, c["missing tag"], c["rule violation"]))
 
-                    try:
-                        with open(summary_file, "r") as f:
-                            summary_data = json.load(f)
+    rows = mapped_rows + extra_rows
 
-                        scores = summary_data.get("scores", {})
-                        hm = scores.get("normalized_harmonic_mean")
+    # Print table
+    name_col_width = max(len("Model"), max((len(r[0]) for r in rows), default=5))
+    num_w = 14
+    header = f"{'Model':<{name_col_width}}  {'missing tag':>{num_w}}  {'rule violation':>{num_w}}  {'total':>{num_w}}"
+    print(header)
+    print("-" * len(header))
 
-                        if hm is not None:
-                            data[exp_type][pretty_name]["score_sum"] += hm
-                            data[exp_type][pretty_name]["count"] += 1
+    g_mt = g_rv = 0
+    for pretty, _key, mt, rv in rows:
+        total = mt + rv
+        g_mt += mt
+        g_rv += rv
+        print(f"{pretty:<{name_col_width}}  {mt:>{num_w}d}  {rv:>{num_w}d}  {total:>{num_w}d}")
 
-                    except Exception as e:
-                        print(f"Failed to read {summary_file}: {e}")
-
-                # update total games seen for that experiment type and model
-                data[exp_type][pretty_name]["total_games"] += total_games
-
-    return data
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-def plot_experiment_type_scores_grouped(data, output_file="experiment_scores_grouped.pdf"):
-    # Canonical experiment types with consistent order
-    exp_types = [
-        ("complexity", "Complexity", "#66c2a5"),   # green
-        ("negotiation", "Negotiation", "#fc8d62"), # orange
-        ("reasoning", "No Reasoning Tag", "#8da0cb"), # blue
-    ]
-
-    # Collect all models
-    all_models = sorted({m for exp_key in data for m in data[exp_key]})
-
-    # --- Compute global average score for sorting ---
-    global_scores = {}
-    for model in all_models:
-        total_score, count = 0, 0
-        for raw_key, _, _ in exp_types:
-            for key in data.keys():
-                if raw_key in key:
-                    stats = data[key].get(model, {"score_sum": 0.0, "total_games": 0})
-                    total_games = stats["total_games"]
-                    score_sum = stats["score_sum"]
-                    if total_games > 0:
-                        total_score += score_sum / total_games
-                        count += 1
-        global_scores[model] = total_score / count if count > 0 else 0
-
-    # Sort models by global score (descending)
-    all_models_sorted = sorted(all_models, key=lambda m: global_scores[m], reverse=True)
-
-    # X positions
-    x = np.arange(len(all_models_sorted))
-    bar_width = 0.25
-
-    plt.figure(figsize=(12, 6))
-
-    handles = []
-    labels = []
-
-    for i, (substr, label, color) in enumerate(exp_types):
-        scores = []
-        for model in all_models_sorted:
-            # find the exp_key that matches substr
-            matching_key = next((k for k in data if substr in k), None)
-            if matching_key is None:
-                scores.append(0)
-                continue
-            stats = data[matching_key].get(model, {"score_sum": 0.0, "total_games": 0})
-            total_games = stats["total_games"]
-            score_sum = stats["score_sum"]
-            weighted_score = score_sum / total_games if total_games > 0 else 0
-            scores.append(weighted_score)
-
-        bar = plt.bar(x + i * bar_width, scores, width=bar_width, color=color)
-        handles.append(bar[0])
-        labels.append(label)
-
-    plt.xticks(x + bar_width, all_models_sorted, rotation=45, ha="right")
-    plt.ylabel("Clemscore (Air Balloon Survival)")
-    plt.title("Clemscore by Model and Experiment Type")
-    plt.legend(handles, labels)  # legend order matches bar order
-    plt.tight_layout()
-    plt.savefig(output_file)
-    plt.close()
-
+    print("-" * len(header))
+    print(f"{'TOTAL':<{name_col_width}}  {g_mt:>{num_w}d}  {g_rv:>{num_w}d}  {g_mt + g_rv:>{num_w}d}")
 
 if __name__ == "__main__":
-    base_paths = {
-        "en": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_en")),
-        "de": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_de")),
-        'it': os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_it"))
-    }
-
-    for lang, path in base_paths.items():
-        if not os.path.exists(path):
-            print(f"Skipping {lang} (path not found: {path})")
-            continue
-
-        print(f"Processing {lang} results from {path}")
-        data = collect_scores([path])
-        plot_experiment_type_scores_grouped(
-            data,
-            output_file=f"experiment_scores_grouped_{lang}.pdf"
-        )
+    main()
