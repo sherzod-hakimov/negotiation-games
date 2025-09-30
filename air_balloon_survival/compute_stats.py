@@ -9,6 +9,96 @@ FOCUS_EXPERIMENTS = {
     "air_balloon_survival_en_reasoning off_hard",
 }
 
+MODEL_NAME_MAP = {
+    # GPT-5 family
+    "gpt-5-2025-08-07-t1.0": "GPT-5 (reasoning)",
+    "gpt-5-2025-08-07-no-reasoning-t1.0": "GPT-5",
+    "gpt-5-mini-2025-08-07-t1.0": "GPT-5 Mini (reasoning)",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0": "GPT-5 Mini",
+    "gpt-oss-120b-t1.0": "GPT-OSS 120B",
+
+    # Qwen family
+    "qwen3-next-80b-a3b-thinking-t1.0": "Qwen3-Next-80B (reasoning)",
+    "qwen3-next-80b-a3b-instruct-t1.0": "Qwen3-Next-80B",
+
+    # Claude family
+    "claude-sonnet-4-20250514-t0.0": "Claude Sonnet 4 (reasoning)",
+    "claude-sonnet-4-20250514-t1.0": "Claude Sonnet 4 (reasoning)",
+    "claude-sonnet-4-20250514-no-reasoning-t0.0": "Claude Sonnet 4",
+    "claude-sonnet-4-20250514-no-reasoning-t1.0": "Claude Sonnet 4",
+
+    # DeepSeek family
+    "deepseek-chat-v3.1-t1.0": "DeepSeek Chat v3.1",
+
+    # LLaMA family
+    "llama-3.3-70b-instruct-t1.0": "LLaMA-3.3-70B Instruct",
+    "deepseek-r1-distill-llama-70b-t1.0": "DeepSeek R1-Distill LLaMA-70B (reasoning)",
+
+    # Nemotron family
+    "nemotron-nano-9b-v2-t1.0": "Nemotron-Nano 9B v2 (reasoning)",
+    "nemotron-nano-9b-v2-no-reasoning-t1.0": "Nemotron-Nano 9B v2"
+}
+
+MODEL_NAME_MAP = {
+    # GPT-5 family
+    "gpt-5-2025-08-07-t1.0": "GPT-5 (on)",
+    "gpt-5-2025-08-07-no-reasoning-t1.0": "GPT-5 (off)",
+    "gpt-5-mini-2025-08-07-t1.0": "GPT-5 Mini (on)",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0": "GPT-5 Mini (off)",
+    "gpt-oss-120b-t1.0": "GPT-OSS 120B (on)",
+
+    # Qwen family
+    "qwen3-next-80b-a3b-thinking-t1.0": "Qwen3-Next-80B (on)",
+    "qwen3-next-80b-a3b-instruct-t1.0": "Qwen3-Next-80B (off)",
+
+    # Claude family
+    "claude-sonnet-4-20250514-t0.0": "Claude Sonnet 4 (on)",
+    "claude-sonnet-4-20250514-t1.0": "Claude Sonnet 4 (on)",
+    "claude-sonnet-4-20250514-no-reasoning-t0.0": "Claude Sonnet 4 (off)",
+    "claude-sonnet-4-20250514-no-reasoning-t1.0": "Claude Sonnet 4 (off)",
+
+    # DeepSeek family
+    "deepseek-chat-v3.1-t1.0": "DeepSeek Chat v3.1 (on)",
+
+    # LLaMA family
+    "llama-3.3-70b-instruct-t1.0": "LLaMA-3.3-70B Instruct (off)",
+    "deepseek-r1-distill-llama-70b-t1.0": "DeepSeek R1-Distill LLaMA-70B (on)",
+
+    # Nemotron family
+    "nemotron-nano-9b-v2-t1.0": "Nemotron-Nano 9B v2 (on)",
+    "nemotron-nano-9b-v2-no-reasoning-t1.0": "Nemotron-Nano 9B v2 (off)"
+}
+
+REASONING_MODELS = {
+    "gpt-5-2025-08-07-t1.0",
+    "gpt-5-mini-2025-08-07-t1.0",
+    "gpt-oss-120b-t1.0",
+    "claude-sonnet-4-20250514-t0.0",
+    "claude-sonnet-4-20250514-t1.0",
+    "nemotron-nano-9b-v2-t1.0",
+    "deepseek-r1-distill-llama-70b-t1.0",
+    "deepseek-chat-v3.1-t1.0",
+    "qwen3-next-80b-a3b-thinking-t1.0",
+}
+
+NONREASONING_MODELS = {
+    "gpt-5-2025-08-07-no-reasoning-t1.0",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0",
+    "claude-sonnet-4-20250514-no-reasoning-t0.0",
+    "claude-sonnet-4-20250514-no-reasoning-t1.0",
+    "nemotron-nano-9b-v2-no-reasoning-t1.0",
+    "llama-3.3-70b-instruct-t1.0",
+    "qwen3-next-80b-a3b-instruct-t1.0"
+}
+
+# Define GPT-family models (both reasoning and no-reasoning, including Mini)
+GPT_MODELS = {
+    "gpt-5-2025-08-07-t1.0",
+    "gpt-5-2025-08-07-no-reasoning-t1.0",
+    "gpt-5-mini-2025-08-07-t1.0",
+    "gpt-5-mini-2025-08-07-no-reasoning-t1.0",
+    "gpt-oss-120b-t1.0"
+}
 
 def compute_model_metrics(base_path: str):
     model_results = {}
@@ -148,7 +238,6 @@ def compute_model_metrics(base_path: str):
 
     return model_results
 
-
 def plot_changes(results, max_points=12):
     """Plot normalized substitutions (all experiments) per model."""
     for model, metrics in results.items():
@@ -173,37 +262,6 @@ def plot_changes(results, max_points=12):
         safe_model = display_name.replace("/", "_").replace(" ", "_").replace("(", "").replace(")", "")
         plt.savefig(f"air_balloon_survival/substitutions_all_{safe_model}.pdf")
         plt.close()
-
-MODEL_NAME_MAP = {
-    # GPT-5 family
-    "gpt-5-2025-08-07-t1.0": "GPT-5 (reasoning)",
-    "gpt-5-2025-08-07-no-reasoning-t1.0": "GPT-5",
-    "gpt-5-mini-2025-08-07-t1.0": "GPT-5 Mini (reasoning)",
-    "gpt-5-mini-2025-08-07-no-reasoning-t1.0": "GPT-5 Mini",
-    "gpt-oss-120b-t1.0": "GPT-OSS 120B",
-
-    # Qwen family
-    "qwen3-next-80b-a3b-thinking-t1.0": "Qwen3-Next-80B (reasoning)",
-    "qwen3-next-80b-a3b-instruct-t1.0": "Qwen3-Next-80B",
-
-    # Claude family
-    "claude-sonnet-4-20250514-t0.0": "Claude Sonnet 4 (reasoning)",
-    "claude-sonnet-4-20250514-t1.0": "Claude Sonnet 4 (reasoning)",
-    "claude-sonnet-4-20250514-no-reasoning-t0.0": "Claude Sonnet 4",
-    "claude-sonnet-4-20250514-no-reasoning-t1.0": "Claude Sonnet 4",
-
-    # DeepSeek family
-    "deepseek-chat-v3.1-t1.0": "DeepSeek Chat v3.1",
-
-    # LLaMA family
-    "llama-3.3-70b-instruct-t1.0": "LLaMA-3.3-70B Instruct",
-    "deepseek-r1-distill-llama-70b-t1.0": "DeepSeek R1-Distill LLaMA-70B (reasoning)",
-
-    # Nemotron family
-    "nemotron-nano-9b-v2-t1.0": "Nemotron-Nano 9B v2 (reasoning)",
-    "nemotron-nano-9b-v2-no-reasoning-t1.0": "Nemotron-Nano 9B v2"
-}
-
 
 def plot_focus_stubbornness(results):
     """Plot stubbornness (focus experiments) with two bars per model (P1, P2), sorted by total stubbornness."""
@@ -246,23 +304,6 @@ def plot_focus_stubbornness(results):
     plt.savefig("air_balloon_survival/stubbornness_focus.pdf")
     plt.close()
 
-REASONING_MODELS = {
-    "gpt-5-2025-08-07-t1.0",
-    "gpt-5-mini-2025-08-07-t1.0",
-    "claude-sonnet-4-20250514-t0.0",
-    "claude-sonnet-4-20250514-t1.0",
-    "nemotron-nano-9b-v2-t1.0",
-    "deepseek-r1-distill-llama-70b-t1.0",
-}
-
-NONREASONING_MODELS = {
-    "gpt-5-2025-08-07-no-reasoning-t1.0",
-    "gpt-5-mini-2025-08-07-no-reasoning-t1.0",
-    "claude-sonnet-4-20250514-no-reasoning-t0.0",
-    "claude-sonnet-4-20250514-no-reasoning-t1.0",
-    "nemotron-nano-9b-v2-no-reasoning-t1.0",
-    "llama-3.3-70b-instruct-t1.0",
-}
 def plot_focus_stubbornness_split(results):
     """Plot stubbornness (focus experiments) separately for reasoning and non-reasoning models."""
 
@@ -378,15 +419,6 @@ def plot_focus_scores_split(results):
                "Average Final Scores (Non-Reasoning Models, Focus Experiments)",
                "air_balloon_survival/final_scores_focus_nonreasoning.pdf")
 
-# Define GPT-family models (both reasoning and no-reasoning, including Mini)
-GPT_MODELS = {
-    "gpt-5-2025-08-07-t1.0",
-    "gpt-5-2025-08-07-no-reasoning-t1.0",
-    "gpt-5-mini-2025-08-07-t1.0",
-    "gpt-5-mini-2025-08-07-no-reasoning-t1.0",
-    "gpt-oss-120b-t1.0"
-}
-
 def plot_focus_scores_gpt(results):
     """Plot final normalized scores (focus experiments) for GPT-family models only,
     ordered by stubbornness totals."""
@@ -431,8 +463,6 @@ def plot_focus_scores_gpt(results):
     plt.tight_layout()
     plt.savefig("air_balloon_survival/final_scores_focus_gpt.pdf")
     plt.close()
-
-
 
 def plot_focus_stubbornness_gpt(results):
     """Plot stubbornness (focus experiments) for GPT-family models only,
@@ -515,35 +545,222 @@ def compute_all_languages(base_root: str, lang_dirs=("results_en", "results_fr",
                 averaged[model][key] = float(np.mean(vals)) if vals else None
     return averaged
 
-def plot_focus_changes(results, max_points=12):
-    """Plot normalized substitutions (focus experiments only) per model."""
+def plot_changes_per_model(results, max_points=12, focus=False):
+    """
+    Plot normalized substitutions per model.
+    If focus=True, use focus experiments only; otherwise use all experiments.
+    """
+
     for model, metrics in results.items():
-        idx_changes_focus = metrics["avg_per_idx_changes_focus"]
-        if not idx_changes_focus:
+        idx_changes = metrics["avg_per_idx_changes_focus"] if focus else metrics["avg_per_idx_changes"]
+        if not idx_changes:
             continue
 
-        xs = sorted(idx_changes_focus.keys())[:max_points]
-        ys = [idx_changes_focus[x] for x in xs]
+        xs = sorted(idx_changes.keys())[:max_points]
+        ys = [idx_changes[x] for x in xs]
 
         plt.figure(figsize=(6, 4))
         plt.plot(xs, ys, linewidth=1.5, marker="o", markersize=3)
 
         display_name = MODEL_NAME_MAP.get(model, model)
+        label = "opposing goals experiments" if focus else "all experiments"
         plt.xlabel("Proposal index")
-        plt.ylabel("Avg. normalized substitutions (focus only)")
-        plt.title(f"Substitutions over proposals (focus experiments)\n{display_name}")
+        plt.ylabel("Avg. normalized substitutions")
         plt.grid(True, linestyle=":", alpha=0.6)
         plt.tight_layout()
 
         safe_model = display_name.replace("/", "_").replace(" ", "_").replace("(", "").replace(")", "")
-        plt.savefig(f"air_balloon_survival/substitutions_focus_{safe_model}.pdf")
+        filename = f"air_balloon_survival/substitutions_focus_{safe_model}.pdf" if focus \
+                   else f"air_balloon_survival/substitutions_all_{safe_model}.pdf"
+        plt.savefig(filename)
         plt.close()
+
+def plot_focus_stubbornness_all(results):
+    """Plot stubbornness (focus experiments) for ALL models,
+    ordered by total stubbornness."""
+
+    models, p1_vals, p2_vals, totals = [], [], [], []
+
+    for model, metrics in results.items():
+        s1 = metrics.get("avg_stubbornness_player1_focus")
+        s2 = metrics.get("avg_stubbornness_player2_focus")
+        st = metrics.get("avg_stubbornness_total_focus")
+        if None in (s1, s2, st):
+            continue
+
+        models.append(MODEL_NAME_MAP.get(model, model))
+        p1_vals.append(s1)
+        p2_vals.append(s2)
+        totals.append(st)
+
+    if not models:
+        return
+
+    # sort by stubbornness totals
+    sorted_idx = np.argsort(totals)[::-1]
+    models = [models[i] for i in sorted_idx]
+    p1_vals = [p1_vals[i] for i in sorted_idx]
+    p2_vals = [p2_vals[i] for i in sorted_idx]
+
+    x = np.arange(len(models))
+    width = 0.35
+
+    plt.figure(figsize=(12, 6))
+    plt.bar(x - width/2, p1_vals, width, label="Player 1")
+    plt.bar(x + width/2, p2_vals, width, label="Player 2")
+    plt.xticks(x, models, rotation=45, ha="right")
+    plt.ylabel("Avg. Stubbornness (Focus)")
+    plt.title("Average Stubbornness by Player (All Models, Focus Experiments)")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("air_balloon_survival/stubbornness_focus_all.pdf")
+    plt.close()
+
+def plot_focus_stubbornness_reasoning_vs_nonreasoning(results):
+    """Plot stubbornness (focus experiments) for reasoning vs non-reasoning models,
+    using the same global ordering but compact x-axes for each group."""
+
+    # Collect all model data
+    model_data = []
+    for model, metrics in results.items():
+        s1 = metrics.get("avg_stubbornness_player1_focus")
+        s2 = metrics.get("avg_stubbornness_player2_focus")
+        st = metrics.get("avg_stubbornness_total_focus")
+        if None in (s1, s2, st):
+            continue
+
+        name = MODEL_NAME_MAP.get(model, model)
+        if model in REASONING_MODELS:
+            group = "Reasoning"
+        elif model in NONREASONING_MODELS:
+            group = "Non-Reasoning"
+        else:
+            continue
+
+        model_data.append((name, s1, s2, st, group))
+
+    if not model_data:
+        return
+
+    # Sort globally by stubbornness total
+    model_data.sort(key=lambda x: x[3], reverse=True)
+
+    def plot_group(group_name, filename):
+        subset = [d for d in model_data if d[4] == group_name]
+        if not subset:
+            return
+
+        models = [d[0] for d in subset]
+        p1_vals = [d[1] for d in subset]
+        p2_vals = [d[2] for d in subset]
+
+        x = np.arange(len(models))
+        width = 0.35
+
+        plt.figure(figsize=(10, 6))
+        plt.bar(x - width/2, p1_vals, width, label="Player 1")
+        plt.bar(x + width/2, p2_vals, width, label="Player 2")
+
+        plt.xticks(x, models, rotation=45, ha="right")
+        plt.ylabel("Avg. Stubbornness (Focus)")
+        plt.title(f"Average Stubbornness ({group_name} Models, Focus Experiments)")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(filename)
+        plt.close()
+
+    # Two compact plots, same ordering rule
+    plot_group("Reasoning", "air_balloon_survival/stubbornness_focus_reasoning.pdf")
+    plot_group("Non-Reasoning", "air_balloon_survival/stubbornness_focus_nonreasoning.pdf")
+
+def plot_stubbornness_all_models(results):
+    """Plot average stubbornness (all experiments) for ALL models, sorted by total stubbornness."""
+
+    models, totals = [], []
+
+    for model, metrics in results.items():
+        st = metrics.get("avg_stubbornness_total")
+        if st is None:
+            continue
+        models.append(MODEL_NAME_MAP.get(model, model))
+        totals.append(st)
+
+    if not models:
+        return
+
+    # Sort by stubbornness total
+    sorted_idx = np.argsort(totals)[::-1]
+    models = [models[i] for i in sorted_idx]
+    totals = [totals[i] for i in sorted_idx]
+
+    x = np.arange(len(models))
+    plt.figure(figsize=(12, 6))
+    plt.bar(x, totals, color="steelblue")
+
+    plt.xticks(x, models, rotation=45, ha="right")
+    plt.ylabel("Avg. Stubbornness")
+    plt.tight_layout()
+    plt.savefig("air_balloon_survival/stubbornness_all_models.pdf")
+    plt.close()
+
+def plot_stubbornness_per_player(results, focus=False):
+    """
+    Plot average stubbornness for Player 1 and Player 2 separately for all models.
+    If focus=True, use focus experiments only.
+    """
+
+    models, p1_vals, p2_vals = [], [], []
+
+    for model, metrics in results.items():
+        if focus:
+            s1 = metrics.get("avg_stubbornness_player1_focus")
+            s2 = metrics.get("avg_stubbornness_player2_focus")
+        else:
+            s1 = metrics.get("avg_stubbornness_player1")
+            s2 = metrics.get("avg_stubbornness_player2")
+
+        if None in (s1, s2):
+            continue
+
+        models.append(MODEL_NAME_MAP.get(model, model))
+        p1_vals.append(s1)
+        p2_vals.append(s2)
+
+    if not models:
+        return
+
+    # Sort by average of P1 and P2 (for stability of ordering)
+    avg_vals = [(a + b) / 2 for a, b in zip(p1_vals, p2_vals)]
+    sorted_idx = np.argsort(avg_vals)[::-1]
+
+    models = [models[i] for i in sorted_idx]
+    p1_vals = [p1_vals[i] for i in sorted_idx]
+    p2_vals = [p2_vals[i] for i in sorted_idx]
+
+    x = np.arange(len(models))
+    width = 0.35
+
+    plt.figure(figsize=(12, 6))
+    plt.bar(x - width/2, p1_vals, width, label="Player 1", color="royalblue")
+    plt.bar(x + width/2, p2_vals, width, label="Player 2", color="orange")
+
+    label = "Focus Experiments" if focus else "All Experiments"
+    plt.xticks(x, models, rotation=45, ha="right")
+    plt.ylabel("Avg. Stubbornness")
+    plt.title(f"Average Stubbornness per Player Across Models ({label})")
+    plt.legend()
+    plt.tight_layout()
+
+    filename = "air_balloon_survival/stubbornness_players_focus.pdf" if focus \
+               else "air_balloon_survival/stubbornness_players_all.pdf"
+    plt.savefig(filename)
+    plt.close()
 
 if __name__ == "__main__":
     base_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     lang_dirs = ["results_en", "results_de", "results_it"]
 
-    log_path = os.path.join(base_root, "results_summary.log")
+    log_path = os.path.join(base_root, "air_balloon_survival/results_summary.log")
     with open(log_path, "w", encoding="utf-8") as log:
 
         def log_print(*args, **kwargs):
@@ -673,6 +890,12 @@ if __name__ == "__main__":
         plot_changes(results)
         plot_focus_stubbornness_gpt(results)
         plot_focus_scores_gpt(results)
-        plot_focus_changes(results)
+        plot_changes_per_model(results, focus=False)
+        plot_changes_per_model(results, focus=True)
+        plot_focus_stubbornness_all(results)
+        plot_focus_stubbornness_reasoning_vs_nonreasoning(results)
+        plot_stubbornness_all_models(results)
+        plot_stubbornness_per_player(results, focus=False)  # all experiments
+        plot_stubbornness_per_player(results, focus=True)  # focus experiments
 
     print(f"\nLog written to {log_path}")
