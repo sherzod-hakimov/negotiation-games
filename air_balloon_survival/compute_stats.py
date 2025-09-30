@@ -12,7 +12,6 @@ FOCUS_EXPERIMENTS = {
 
 def compute_model_metrics(base_path: str):
     model_results = {}
-
     for model in os.listdir(base_path):
         model_path = os.path.join(base_path, model)
         if not os.path.isdir(model_path):
@@ -22,33 +21,16 @@ def compute_model_metrics(base_path: str):
         if not os.path.exists(hot_air_path):
             continue
 
-        # pareto adherence in a game
+        # containers
         adherence_rates = []
-        # alternation rates in a game
         alternation_rates = []
-        # final normalized utilities
-        final_u1_vals = []
-        final_u2_vals = []
-
-        # focus-only final normalized utilities
-        final_u1_vals_focus = []
-        final_u2_vals_focus = []
-
-        # stubbornness values
-        stubborn_p1 = []
-        stubborn_p2 = []
-        stubborn_total = []
-
-        # focus-only stubbornness
-        stubborn_p1_focus = []
-        stubborn_p2_focus = []
-        stubborn_total_focus = []
+        final_u1_vals, final_u2_vals = [], []
+        final_u1_vals_focus, final_u2_vals_focus = [], []
+        stubborn_p1, stubborn_p2, stubborn_total = [], [], []
+        stubborn_p1_focus, stubborn_p2_focus, stubborn_total_focus = [], [], []
 
         per_idx_changes = defaultdict(list)
         per_idx_main_scores = defaultdict(list)
-        conv_lengths = []
-
-        # Focus experiment only
         per_idx_changes_focus = defaultdict(list)
         per_idx_diff_focus = defaultdict(list)
         per_idx_scores_focus = defaultdict(list)
@@ -58,7 +40,6 @@ def compute_model_metrics(base_path: str):
             if not os.path.isdir(exp_path):
                 continue
 
-            # --- regular stats for all experiments ---
             for instance in os.listdir(exp_path):
                 inst_path = os.path.join(exp_path, instance)
                 if not os.path.isdir(inst_path):
@@ -73,8 +54,9 @@ def compute_model_metrics(base_path: str):
                         summary_data = json.load(f)
 
                     scores = summary_data.get("scores", {})
-                    # add player 1 and 2 final scores
                     agreement = summary_data.get("agreement")
+
+                    # final normalized utils
                     if isinstance(agreement, dict):
                         u1 = agreement.get("normalized_u1")
                         u2 = agreement.get("normalized_u2")
@@ -82,24 +64,22 @@ def compute_model_metrics(base_path: str):
                             final_u1_vals.append(u1)
                         if u2 is not None:
                             final_u2_vals.append(u2)
-
                         if experiment in FOCUS_EXPERIMENTS:
                             if u1 is not None:
                                 final_u1_vals_focus.append(u1)
                             if u2 is not None:
                                 final_u2_vals_focus.append(u2)
 
+                    # stubbornness
                     st1 = scores.get("stubbornness_player1")
                     st2 = scores.get("stubbornness_player2")
                     stt = scores.get("stubbornness_total")
-
                     if st1 is not None:
                         stubborn_p1.append(st1)
                     if st2 is not None:
                         stubborn_p2.append(st2)
                     if stt is not None:
                         stubborn_total.append(stt)
-
                     if experiment in FOCUS_EXPERIMENTS:
                         if st1 is not None:
                             stubborn_p1_focus.append(st1)
@@ -108,88 +88,62 @@ def compute_model_metrics(base_path: str):
                         if stt is not None:
                             stubborn_total_focus.append(stt)
 
-                    proposals = summary_data.get("proposals", [])
-                    conv_len = len(proposals)
-                    conv_lengths.append(conv_len)
-
-                    pareto_rate = scores.get("pareto_adherence_rate", None)
+                    # pareto / alternation
+                    pareto_rate = scores.get("pareto_adherence_rate")
                     if pareto_rate is not None:
                         adherence_rates.append(pareto_rate)
-
-                    alternation_rate = scores.get("alternation_rate", None)
+                    alternation_rate = scores.get("alternation_rate")
                     if alternation_rate is not None:
                         alternation_rates.append(alternation_rate)
 
-                    # stubbornness values
-                    if "stubbornness_player1" in scores:
-                        stubborn_p1.append(scores["stubbornness_player1"])
-                    if "stubbornness_player2" in scores:
-                        stubborn_p2.append(scores["stubbornness_player2"])
-                    if "stubbornness_total" in scores:
-                        stubborn_total.append(scores["stubbornness_total"])
-
-                    # per-proposal substitutions
+                    # per-proposal changes
                     prop_changes = summary_data.get("normalized_substitutions_per_proposal", [])
-                    for idx, val in enumerate(prop_changes, start=1):
+                    for idx, val in enumerate(prop_changes, start=1):  # start at proposal 2
                         if val is not None:
                             per_idx_changes[idx].append(val)
-
-                    # per-proposal harmonic mean
-                    for idx, proposal in enumerate(proposals, start=1):
-                        val = proposal.get("normalized_harmonic_mean", None)
-                        if val is not None:
-                            per_idx_main_scores[idx].append(val)
-
-                    # --- focus experiments only ---
-                    if experiment in FOCUS_EXPERIMENTS:
-                        # substitutions
-                        for idx, val in enumerate(prop_changes, start=1):
-                            if val is not None:
+                            if experiment in FOCUS_EXPERIMENTS:
                                 per_idx_changes_focus[idx].append(val)
 
-                        # abs diff between players
-                        for idx, proposal in enumerate(proposals, start=1):
+                    proposals = summary_data.get("proposals", [])
+                    for idx, proposal in enumerate(proposals, start=1):
+                        val = proposal.get("normalized_harmonic_mean")
+                        if val is not None:
+                            per_idx_main_scores[idx].append(val)
+                            if experiment in FOCUS_EXPERIMENTS:
+                                per_idx_scores_focus[idx].append(val)
+
+                        if experiment in FOCUS_EXPERIMENTS:
                             u1 = proposal.get("normalized_u1")
                             u2 = proposal.get("normalized_u2")
                             if u1 is not None and u2 is not None:
                                 per_idx_diff_focus[idx].append(abs(u1 - u2))
 
-                        # per-proposal harmonic mean
-                        for idx, proposal in enumerate(proposals, start=1):
-                            val = proposal.get("normalized_harmonic_mean", None)
-                            if val is not None:
-                                per_idx_scores_focus[idx].append(val)
-
                 except Exception as e:
                     print(f"Failed to read {summary_file}: {e}")
 
-        model_results[model] = {
-            # all experiments
-            "avg_pareto_adherence_rate": float(np.mean(adherence_rates)) if adherence_rates else None,
-            "avg_alternation_rate": float(np.mean(alternation_rates)) if alternation_rates else None,
-            "avg_stubbornness_player1": float(np.mean([v for v in stubborn_p1 if v is not None])) if any(
-                v is not None for v in stubborn_p1) else None,
-            "avg_stubbornness_player2": float(np.mean([v for v in stubborn_p2 if v is not None])) if any(
-                v is not None for v in stubborn_p2) else None,
-            "avg_stubbornness_total": float(np.mean([v for v in stubborn_total if v is not None])) if any(
-                v is not None for v in stubborn_total) else None,
-            "avg_per_idx_changes": {idx: float(np.mean(vals)) for idx, vals in per_idx_changes.items()},
-            "avg_per_idx_main_scores": {idx: float(np.mean(vals)) for idx, vals in per_idx_main_scores.items()},
-            "avg_final_normalized_u1": float(np.mean(final_u1_vals)) if final_u1_vals else None,
-            "avg_final_normalized_u2": float(np.mean(final_u2_vals)) if final_u2_vals else None,
+        # store averages (empty lists → None, partial lists → valid avg)
+        def safe_mean(vals):
+            return float(np.mean(vals)) if vals else None
 
-            # focus only
-            "avg_per_idx_changes_focus": {idx: float(np.mean(vals)) for idx, vals in per_idx_changes_focus.items()},
-            "avg_per_idx_diff_focus": {idx: float(np.mean(vals)) for idx, vals in per_idx_diff_focus.items()},
-            "avg_per_idx_scores_focus": {idx: float(np.mean(vals)) for idx, vals in per_idx_scores_focus.items()},
-            "avg_stubbornness_player1_focus": float(np.mean([v for v in stubborn_p1_focus if v is not None])) if any(
-                v is not None for v in stubborn_p1_focus) else None,
-            "avg_stubbornness_player2_focus": float(np.mean([v for v in stubborn_p2_focus if v is not None])) if any(
-                v is not None for v in stubborn_p2_focus) else None,
-            "avg_stubbornness_total_focus": float(np.mean([v for v in stubborn_total_focus if v is not None])) if any(
-                v is not None for v in stubborn_total_focus) else None,
-            "avg_final_normalized_u1_focus": float(np.mean(final_u1_vals_focus)) if final_u1_vals_focus else None,
-            "avg_final_normalized_u2_focus": float(np.mean(final_u2_vals_focus)) if final_u2_vals_focus else None,
+        model_results[model] = {
+            "avg_pareto_adherence_rate": safe_mean(adherence_rates),
+            "avg_alternation_rate": safe_mean(alternation_rates),
+            "avg_stubbornness_player1": safe_mean(stubborn_p1),
+            "avg_stubbornness_player2": safe_mean(stubborn_p2),
+            "avg_stubbornness_total": safe_mean(stubborn_total),
+            "avg_per_idx_changes": {idx: safe_mean(vals) for idx, vals in per_idx_changes.items()},
+            "avg_per_idx_main_scores": {idx: safe_mean(vals) for idx, vals in per_idx_main_scores.items()},
+            "avg_final_normalized_u1": safe_mean(final_u1_vals),
+            "avg_final_normalized_u2": safe_mean(final_u2_vals),
+            # focus
+            "avg_per_idx_changes_focus": {idx: safe_mean(vals) for idx, vals in per_idx_changes_focus.items()},
+            "avg_per_idx_diff_focus": {idx: safe_mean(vals) for idx, vals in per_idx_diff_focus.items()},
+            "avg_per_idx_scores_focus": {idx: safe_mean(vals) for idx, vals in per_idx_scores_focus.items()},
+            "avg_stubbornness_player1_focus": safe_mean(stubborn_p1_focus),
+            "avg_stubbornness_player2_focus": safe_mean(stubborn_p2_focus),
+            "avg_stubbornness_total_focus": safe_mean(stubborn_total_focus),
+            "avg_final_normalized_u1_focus": safe_mean(final_u1_vals_focus),
+            "avg_final_normalized_u2_focus": safe_mean(final_u2_vals_focus),
         }
 
     return model_results
@@ -447,6 +401,9 @@ def plot_focus_scores_gpt(results):
         u2 = metrics.get("avg_final_normalized_u2_focus")
         st = metrics.get("avg_stubbornness_total_focus")
 
+        if None in (u1, u2, st):
+            continue
+
         models.append(MODEL_NAME_MAP.get(model, model))
         u1_vals.append(u1)
         u2_vals.append(u2)
@@ -476,6 +433,7 @@ def plot_focus_scores_gpt(results):
     plt.close()
 
 
+
 def plot_focus_stubbornness_gpt(results):
     """Plot stubbornness (focus experiments) for GPT-family models only,
     ordered by total stubbornness."""
@@ -489,8 +447,8 @@ def plot_focus_stubbornness_gpt(results):
         s1 = metrics.get("avg_stubbornness_player1_focus")
         s2 = metrics.get("avg_stubbornness_player2_focus")
         st = metrics.get("avg_stubbornness_total_focus")
-        #if None in (s1, s2, st):
-        #    continue
+        if None in (s1, s2, st):
+            continue
 
         models.append(MODEL_NAME_MAP.get(model, model))
         p1_vals.append(s1)
@@ -520,99 +478,201 @@ def plot_focus_stubbornness_gpt(results):
     plt.savefig("air_balloon_survival/stubbornness_focus_model_choice.pdf")
     plt.close()
 
+def compute_all_languages(base_root: str, lang_dirs=("results_en", "results_fr", "results_pt")):
+    """Aggregate results across multiple languages by averaging metrics per model."""
+    from collections import defaultdict
 
-if __name__ == "__main__":
-    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results_en"))
-    results = compute_model_metrics(base_path)
+    all_results = defaultdict(list)
 
-    print("\n=== Average Pareto adherence rate per model ===")
-    for model, metrics in results.items():
-        pareto = metrics["avg_pareto_adherence_rate"]
-        pareto_str = f"{pareto:.3f}" if pareto is not None else "no data"
-        print(f"{model}: {pareto_str}")
+    for lang in lang_dirs:
+        path = os.path.join(base_root, lang)
+        if not os.path.exists(path):
+            continue
+        res = compute_model_metrics(path)
+        for model, metrics in res.items():
+            all_results[model].append(metrics)
 
-    print("\n=== Average alternation rate per model ===")
-    for model, metrics in results.items():
-        alternation = metrics["avg_alternation_rate"]
-        alternation_str = f"{alternation:.3f}" if alternation is not None else "no data"
-        print(f"{model}: {alternation_str}")
+    averaged = {}
+    for model, metrics_list in all_results.items():
+        averaged[model] = {}
+        keys = metrics_list[0].keys()
+        for key in keys:
+            vals = []
+            if isinstance(metrics_list[0][key], dict):
+                # dicts: average per index
+                idx_all = defaultdict(list)
+                for m in metrics_list:
+                    for idx, v in m[key].items():
+                        if v is not None:
+                            idx_all[idx].append(v)
+                averaged[model][key] = {idx: float(np.mean(vs)) for idx, vs in idx_all.items()}
+            else:
+                # scalars: just average over languages
+                for m in metrics_list:
+                    val = m.get(key)
+                    if val is not None:
+                        vals.append(val)
+                averaged[model][key] = float(np.mean(vals)) if vals else None
+    return averaged
 
-    print("\n=== Average stubbornness (all experiments) ===")
-    for model, metrics in results.items():
-        s1 = metrics["avg_stubbornness_player1"]
-        s2 = metrics["avg_stubbornness_player2"]
-        st = metrics["avg_stubbornness_total"]
-        print(f"{model}: P1={s1:.3f} P2={s2:.3f} Total={st:.3f}" if None not in (s1, s2, st) else f"{model}: no data")
-
-    print("\n=== Average stubbornness (focus experiments) ===")
-    for model, metrics in results.items():
-        s1 = metrics["avg_stubbornness_player1_focus"]
-        s2 = metrics["avg_stubbornness_player2_focus"]
-        st = metrics["avg_stubbornness_total_focus"]
-        print(f"{model}: P1={s1:.3f} P2={s2:.3f} Total={st:.3f}" if None not in (s1, s2, st) else f"{model}: no data")
-
-    """
-    print("\n=== Average normalized substitutions per proposal index (all experiments) ===")
-    for model, metrics in results.items():
-        idx_changes = metrics["avg_per_idx_changes"]
-        if not idx_changes:
-            print(f"{model}: no data")
-        else:
-            idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_changes.items())])
-            print(f"{model}: {idx_str}")
-
-    print("\n=== Average normalized harmonic mean per proposal index (all experiments) ===")
-    for model, metrics in results.items():
-        idx_scores = metrics["avg_per_idx_main_scores"]
-        if not idx_scores:
-            print(f"{model}: no data")
-        else:
-            idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_scores.items())])
-            print(f"{model}: {idx_str}")
-
-    print("\n=== Focus experiments only (normalized substitutions per proposal index) ===")
+def plot_focus_changes(results, max_points=12):
+    """Plot normalized substitutions (focus experiments only) per model."""
     for model, metrics in results.items():
         idx_changes_focus = metrics["avg_per_idx_changes_focus"]
         if not idx_changes_focus:
-            print(f"{model}: no data")
-        else:
-            idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_changes_focus.items())])
-            print(f"{model}: {idx_str}")
+            continue
 
-    print("\n=== Focus experiments only (absolute difference between players per proposal index) ===")
-    for model, metrics in results.items():
-        idx_diff_focus = metrics["avg_per_idx_diff_focus"]
-        if not idx_diff_focus:
-            print(f"{model}: no data")
-        else:
-            idx_str = ", ".join([f"idx {idx}: {val:.3f}" for idx, val in sorted(idx_diff_focus.items())])
-            print(f"{model}: {idx_str}")
-"""
+        xs = sorted(idx_changes_focus.keys())[:max_points]
+        ys = [idx_changes_focus[x] for x in xs]
 
-    print("\n=== Average final normalized utilities (all experiments) ===")
-    for model, metrics in results.items():
-        u1 = metrics["avg_final_normalized_u1"]
-        u2 = metrics["avg_final_normalized_u2"]
-        print(f"{model}: P1={u1:.3f} P2={u2:.3f}" if None not in (u1, u2) else f"{model}: no data")
+        plt.figure(figsize=(6, 4))
+        plt.plot(xs, ys, linewidth=1.5, marker="o", markersize=3)
 
-    print("\n=== Average final normalized utilities (focus experiments) ===")
-    for model, metrics in results.items():
-        u1 = metrics["avg_final_normalized_u1_focus"]
-        u2 = metrics["avg_final_normalized_u2_focus"]
-        print(f"{model}: P1={u1:.3f} P2={u2:.3f}" if None not in (u1, u2) else f"{model}: no data")
+        display_name = MODEL_NAME_MAP.get(model, model)
+        plt.xlabel("Proposal index")
+        plt.ylabel("Avg. normalized substitutions (focus only)")
+        plt.title(f"Substitutions over proposals (focus experiments)\n{display_name}")
+        plt.grid(True, linestyle=":", alpha=0.6)
+        plt.tight_layout()
 
-    # plots
-    # plot_focus_changes(results)
-    # plot_focus_scores(results)
+        safe_model = display_name.replace("/", "_").replace(" ", "_").replace("(", "").replace(")", "")
+        plt.savefig(f"air_balloon_survival/substitutions_focus_{safe_model}.pdf")
+        plt.close()
 
-    # Substitution plots for ALL experiments (one PDF per model)
-    plot_changes(results)
+if __name__ == "__main__":
+    base_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    lang_dirs = ["results_en", "results_de", "results_it"]
 
-    #plot_focus_stubbornness(results)
-    #plot_focus_final_scores(results)
+    log_path = os.path.join(base_root, "results_summary.log")
+    with open(log_path, "w", encoding="utf-8") as log:
 
-    # plots
-    # plot_focus_stubbornness_split(results)
-    # plot_focus_final_scores(results)
-    plot_focus_stubbornness_gpt(results)
-    plot_focus_scores_gpt(results)
+        def log_print(*args, **kwargs):
+            """Helper to write both to file and (optionally) stdout"""
+            msg = " ".join(str(a) for a in args)
+            log.write(msg + "\n")
+
+        log_print("=== Per-language results ===")
+        for lang in lang_dirs:
+            path = os.path.join(base_root, lang)
+            if not os.path.exists(path):
+                continue
+
+            log_print(f"\n### Language: {lang} ###")
+            results = compute_model_metrics(path)
+
+            log_print("\n=== Average Pareto adherence rate per model ===")
+            for model, metrics in results.items():
+                pareto = metrics["avg_pareto_adherence_rate"]
+                pareto_str = f"{pareto:.3f}" if pareto is not None else "no data"
+                log_print(f"{model}: {pareto_str}")
+
+            log_print("\n=== Average alternation rate per model ===")
+            for model, metrics in results.items():
+                alternation = metrics["avg_alternation_rate"]
+                alternation_str = f"{alternation:.3f}" if alternation is not None else "no data"
+                log_print(f"{model}: {alternation_str}")
+
+            log_print("\n=== Average stubbornness (all experiments) ===")
+            for model, metrics in results.items():
+                s1 = metrics["avg_stubbornness_player1"]
+                s2 = metrics["avg_stubbornness_player2"]
+                st = metrics["avg_stubbornness_total"]
+                if None not in (s1, s2, st):
+                    log_print(f"{model}: P1={s1:.3f} P2={s2:.3f} Total={st:.3f}")
+                else:
+                    log_print(f"{model}: no data")
+
+            log_print("\n=== Average stubbornness (focus experiments) ===")
+            for model, metrics in results.items():
+                s1 = metrics["avg_stubbornness_player1_focus"]
+                s2 = metrics["avg_stubbornness_player2_focus"]
+                st = metrics["avg_stubbornness_total_focus"]
+                if None not in (s1, s2, st):
+                    log_print(f"{model}: P1={s1:.3f} P2={s2:.3f} Total={st:.3f}")
+                else:
+                    log_print(f"{model}: no data")
+
+            log_print("\n=== Average final normalized utilities (all experiments) ===")
+            for model, metrics in results.items():
+                u1 = metrics["avg_final_normalized_u1"]
+                u2 = metrics["avg_final_normalized_u2"]
+                if None not in (u1, u2):
+                    log_print(f"{model}: P1={u1:.3f} P2={u2:.3f}")
+                else:
+                    log_print(f"{model}: no data")
+
+            log_print("\n=== Average final normalized utilities (focus experiments) ===")
+            for model, metrics in results.items():
+                u1 = metrics["avg_final_normalized_u1_focus"]
+                u2 = metrics["avg_final_normalized_u2_focus"]
+                if None not in (u1, u2):
+                    log_print(f"{model}: P1={u1:.3f} P2={u2:.3f}")
+                else:
+                    log_print(f"{model}: no data")
+
+            # plots for this language
+            plot_changes(results)
+            plot_focus_stubbornness_gpt(results)
+            plot_focus_scores_gpt(results)
+
+        # === cross-language average ===
+        log_print("\n\n=== Cross-language averaged results ===")
+        results = compute_all_languages(base_root, lang_dirs=lang_dirs)
+
+        log_print("\n=== Average Pareto adherence rate per model ===")
+        for model, metrics in results.items():
+            pareto = metrics["avg_pareto_adherence_rate"]
+            pareto_str = f"{pareto:.3f}" if pareto is not None else "no data"
+            log_print(f"{model}: {pareto_str}")
+
+        log_print("\n=== Average alternation rate per model ===")
+        for model, metrics in results.items():
+            alternation = metrics["avg_alternation_rate"]
+            alternation_str = f"{alternation:.3f}" if alternation is not None else "no data"
+            log_print(f"{model}: {alternation_str}")
+
+        log_print("\n=== Average stubbornness (all experiments) ===")
+        for model, metrics in results.items():
+            s1 = metrics["avg_stubbornness_player1"]
+            s2 = metrics["avg_stubbornness_player2"]
+            st = metrics["avg_stubbornness_total"]
+            if None not in (s1, s2, st):
+                log_print(f"{model}: P1={s1:.3f} P2={s2:.3f} Total={st:.3f}")
+            else:
+                log_print(f"{model}: no data")
+
+        log_print("\n=== Average stubbornness (focus experiments) ===")
+        for model, metrics in results.items():
+            s1 = metrics["avg_stubbornness_player1_focus"]
+            s2 = metrics["avg_stubbornness_player2_focus"]
+            st = metrics["avg_stubbornness_total_focus"]
+            if None not in (s1, s2, st):
+                log_print(f"{model}: P1={s1:.3f} P2={s2:.3f} Total={st:.3f}")
+            else:
+                log_print(f"{model}: no data")
+
+        log_print("\n=== Average final normalized utilities (all experiments) ===")
+        for model, metrics in results.items():
+            u1 = metrics["avg_final_normalized_u1"]
+            u2 = metrics["avg_final_normalized_u2"]
+            if None not in (u1, u2):
+                log_print(f"{model}: P1={u1:.3f} P2={u2:.3f}")
+            else:
+                log_print(f"{model}: no data")
+
+        log_print("\n=== Average final normalized utilities (focus experiments) ===")
+        for model, metrics in results.items():
+            u1 = metrics["avg_final_normalized_u1_focus"]
+            u2 = metrics["avg_final_normalized_u2_focus"]
+            if None not in (u1, u2):
+                log_print(f"{model}: P1={u1:.3f} P2={u2:.3f}")
+            else:
+                log_print(f"{model}: no data")
+
+        # plots for averaged results
+        plot_changes(results)
+        plot_focus_stubbornness_gpt(results)
+        plot_focus_scores_gpt(results)
+        plot_focus_changes(results)
+
+    print(f"\nLog written to {log_path}")
