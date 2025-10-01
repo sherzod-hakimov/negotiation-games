@@ -100,8 +100,27 @@ GPT_MODELS = {
     "gpt-oss-120b-t1.0"
 }
 
+# Pairs to compare: (on_key, off_key)
+SUBSTITUTIONS_PAIRS = {
+    # Claude keys are what your compute_model_metrics emits after collapsing
+    "Claude Sonnet 4": ("claude-sonnet-4 (on)", "claude-sonnet-4 (off)"),
+
+    # GPT families (raw IDs)
+    "GPT-5": ("gpt-5-2025-08-07-t1.0", "gpt-5-2025-08-07-no-reasoning-t1.0"),
+    "GPT-5 Mini": ("gpt-5-mini-2025-08-07-t1.0", "gpt-5-mini-2025-08-07-no-reasoning-t1.0"),
+
+    # Qwen & Nemotron (raw IDs)
+    "Qwen3-Next-80B": ("qwen3-next-80b-a3b-thinking-t1.0", "qwen3-next-80b-a3b-instruct-t1.0"),
+    "Nemotron-Nano 9B v2": ("nemotron-nano-9b-v2-t1.0", "nemotron-nano-9b-v2-no-reasoning-t1.0"),
+
+    # 🔹 Your requested comparison:
+    #    blue = reasoning (on) = DeepSeek R1-Distill, red = non-reasoning (off) = LLaMA Instruct
+    "LLaMA vs R1-Distill": ("deepseek-r1-distill-llama-70b-t1.0", "llama-3.3-70b-instruct-t1.0"),
+}
+
 def compute_model_metrics(base_path: str):
     model_results = {}
+
     for model in os.listdir(base_path):
         model_path = os.path.join(base_path, model)
         if not os.path.isdir(model_path):
@@ -211,30 +230,85 @@ def compute_model_metrics(base_path: str):
                 except Exception as e:
                     print(f"Failed to read {summary_file}: {e}")
 
-        # store averages (empty lists → None, partial lists → valid avg)
+        # === collapse Claude models ===
+        if model in {"claude-sonnet-4-20250514-t0.0", "claude-sonnet-4-20250514-t1.0"}:
+            model_key = "claude-sonnet-4 (on)"
+        elif model in {"claude-sonnet-4-20250514-no-reasoning-t0.0", "claude-sonnet-4-20250514-no-reasoning-t1.0"}:
+            model_key = "claude-sonnet-4 (off)"
+        else:
+            model_key = model
+
+        # store raw values in lists so we can merge before averaging
+        if model_key not in model_results:
+            model_results[model_key] = {
+                "avg_pareto_adherence_rate": [],
+                "avg_alternation_rate": [],
+                "avg_stubbornness_player1": [],
+                "avg_stubbornness_player2": [],
+                "avg_stubbornness_total": [],
+                "avg_per_idx_changes": defaultdict(list),
+                "avg_per_idx_main_scores": defaultdict(list),
+                "avg_final_normalized_u1": [],
+                "avg_final_normalized_u2": [],
+                # focus
+                "avg_per_idx_changes_focus": defaultdict(list),
+                "avg_per_idx_diff_focus": defaultdict(list),
+                "avg_per_idx_scores_focus": defaultdict(list),
+                "avg_stubbornness_player1_focus": [],
+                "avg_stubbornness_player2_focus": [],
+                "avg_stubbornness_total_focus": [],
+                "avg_final_normalized_u1_focus": [],
+                "avg_final_normalized_u2_focus": [],
+            }
+
+        entry = model_results[model_key]
+        entry["avg_pareto_adherence_rate"].extend(adherence_rates)
+        entry["avg_alternation_rate"].extend(alternation_rates)
+        entry["avg_stubbornness_player1"].extend(stubborn_p1)
+        entry["avg_stubbornness_player2"].extend(stubborn_p2)
+        entry["avg_stubbornness_total"].extend(stubborn_total)
+        for idx, vals in per_idx_changes.items():
+            entry["avg_per_idx_changes"][idx].extend(vals)
+        for idx, vals in per_idx_main_scores.items():
+            entry["avg_per_idx_main_scores"][idx].extend(vals)
+        entry["avg_final_normalized_u1"].extend(final_u1_vals)
+        entry["avg_final_normalized_u2"].extend(final_u2_vals)
+        # focus
+        for idx, vals in per_idx_changes_focus.items():
+            entry["avg_per_idx_changes_focus"][idx].extend(vals)
+        for idx, vals in per_idx_diff_focus.items():
+            entry["avg_per_idx_diff_focus"][idx].extend(vals)
+        for idx, vals in per_idx_scores_focus.items():
+            entry["avg_per_idx_scores_focus"][idx].extend(vals)
+        entry["avg_stubbornness_player1_focus"].extend(stubborn_p1_focus)
+        entry["avg_stubbornness_player2_focus"].extend(stubborn_p2_focus)
+        entry["avg_stubbornness_total_focus"].extend(stubborn_total_focus)
+        entry["avg_final_normalized_u1_focus"].extend(final_u1_vals_focus)
+        entry["avg_final_normalized_u2_focus"].extend(final_u2_vals_focus)
+
+    # === convert lists to averages ===
+    for model_key, entry in model_results.items():
         def safe_mean(vals):
             return float(np.mean(vals)) if vals else None
 
-        model_results[model] = {
-            "avg_pareto_adherence_rate": safe_mean(adherence_rates),
-            "avg_alternation_rate": safe_mean(alternation_rates),
-            "avg_stubbornness_player1": safe_mean(stubborn_p1),
-            "avg_stubbornness_player2": safe_mean(stubborn_p2),
-            "avg_stubbornness_total": safe_mean(stubborn_total),
-            "avg_per_idx_changes": {idx: safe_mean(vals) for idx, vals in per_idx_changes.items()},
-            "avg_per_idx_main_scores": {idx: safe_mean(vals) for idx, vals in per_idx_main_scores.items()},
-            "avg_final_normalized_u1": safe_mean(final_u1_vals),
-            "avg_final_normalized_u2": safe_mean(final_u2_vals),
-            # focus
-            "avg_per_idx_changes_focus": {idx: safe_mean(vals) for idx, vals in per_idx_changes_focus.items()},
-            "avg_per_idx_diff_focus": {idx: safe_mean(vals) for idx, vals in per_idx_diff_focus.items()},
-            "avg_per_idx_scores_focus": {idx: safe_mean(vals) for idx, vals in per_idx_scores_focus.items()},
-            "avg_stubbornness_player1_focus": safe_mean(stubborn_p1_focus),
-            "avg_stubbornness_player2_focus": safe_mean(stubborn_p2_focus),
-            "avg_stubbornness_total_focus": safe_mean(stubborn_total_focus),
-            "avg_final_normalized_u1_focus": safe_mean(final_u1_vals_focus),
-            "avg_final_normalized_u2_focus": safe_mean(final_u2_vals_focus),
-        }
+        entry["avg_pareto_adherence_rate"] = safe_mean(entry["avg_pareto_adherence_rate"])
+        entry["avg_alternation_rate"] = safe_mean(entry["avg_alternation_rate"])
+        entry["avg_stubbornness_player1"] = safe_mean(entry["avg_stubbornness_player1"])
+        entry["avg_stubbornness_player2"] = safe_mean(entry["avg_stubbornness_player2"])
+        entry["avg_stubbornness_total"] = safe_mean(entry["avg_stubbornness_total"])
+        entry["avg_per_idx_changes"] = {idx: safe_mean(vals) for idx, vals in entry["avg_per_idx_changes"].items()}
+        entry["avg_per_idx_main_scores"] = {idx: safe_mean(vals) for idx, vals in entry["avg_per_idx_main_scores"].items()}
+        entry["avg_final_normalized_u1"] = safe_mean(entry["avg_final_normalized_u1"])
+        entry["avg_final_normalized_u2"] = safe_mean(entry["avg_final_normalized_u2"])
+        # focus
+        entry["avg_per_idx_changes_focus"] = {idx: safe_mean(vals) for idx, vals in entry["avg_per_idx_changes_focus"].items()}
+        entry["avg_per_idx_diff_focus"] = {idx: safe_mean(vals) for idx, vals in entry["avg_per_idx_diff_focus"].items()}
+        entry["avg_per_idx_scores_focus"] = {idx: safe_mean(vals) for idx, vals in entry["avg_per_idx_scores_focus"].items()}
+        entry["avg_stubbornness_player1_focus"] = safe_mean(entry["avg_stubbornness_player1_focus"])
+        entry["avg_stubbornness_player2_focus"] = safe_mean(entry["avg_stubbornness_player2_focus"])
+        entry["avg_stubbornness_total_focus"] = safe_mean(entry["avg_stubbornness_total_focus"])
+        entry["avg_final_normalized_u1_focus"] = safe_mean(entry["avg_final_normalized_u1_focus"])
+        entry["avg_final_normalized_u2_focus"] = safe_mean(entry["avg_final_normalized_u2_focus"])
 
     return model_results
 
@@ -298,7 +372,6 @@ def plot_focus_stubbornness(results):
 
     plt.xticks(x, models, rotation=45, ha="right")
     plt.ylabel("Avg. Stubbornness (Focus)")
-    plt.title("Average Stubbornness by Player (Focus Experiments)")
     plt.legend()
     plt.tight_layout()
     plt.savefig("air_balloon_survival/stubbornness_focus.pdf")
@@ -405,7 +478,7 @@ def plot_focus_scores_split(results):
         plt.bar(x + width/2, u2_vals, width, label="Player 2")
         plt.xticks(x, models, rotation=45, ha="right")
         plt.ylabel("Avg. Final Normalized Utility (Focus)")
-        plt.title(title)
+        # plt.title(title)
         plt.legend()
         plt.tight_layout()
         plt.savefig(filename)
@@ -609,8 +682,8 @@ def plot_focus_stubbornness_all(results):
     plt.bar(x - width/2, p1_vals, width, label="Player 1")
     plt.bar(x + width/2, p2_vals, width, label="Player 2")
     plt.xticks(x, models, rotation=45, ha="right")
-    plt.ylabel("Avg. Stubbornness (Focus)")
-    plt.title("Average Stubbornness by Player (All Models, Focus Experiments)")
+    plt.ylabel("Avg. Stubbornness")
+    # plt.title("Average Stubbornness by Player (All Models, Focus Experiments)")
     plt.legend()
     plt.tight_layout()
     plt.savefig("air_balloon_survival/stubbornness_focus_all.pdf")
@@ -663,7 +736,7 @@ def plot_focus_stubbornness_reasoning_vs_nonreasoning(results):
 
         plt.xticks(x, models, rotation=45, ha="right")
         plt.ylabel("Avg. Stubbornness (Focus)")
-        plt.title(f"Average Stubbornness ({group_name} Models, Focus Experiments)")
+        # plt.title(f"Average Stubbornness ({group_name} Models, Focus Experiments)")
         plt.legend()
         plt.tight_layout()
         plt.savefig(filename)
@@ -747,7 +820,7 @@ def plot_stubbornness_per_player(results, focus=False):
     label = "Focus Experiments" if focus else "All Experiments"
     plt.xticks(x, models, rotation=45, ha="right")
     plt.ylabel("Avg. Stubbornness")
-    plt.title(f"Average Stubbornness per Player Across Models ({label})")
+    # plt.title(f"Average Stubbornness per Player Across Models ({label})")
     plt.legend()
     plt.tight_layout()
 
@@ -755,6 +828,53 @@ def plot_stubbornness_per_player(results, focus=False):
                else "air_balloon_survival/stubbornness_players_all.pdf"
     plt.savefig(filename)
     plt.close()
+
+def plot_changes_dual(results, max_points=12, focus=False):
+    """
+    For each named pair, plot substitutions curves together:
+      - blue: reasoning (on_key)
+      - red:  non-reasoning (off_key)
+    Uses MODEL_NAME_MAP (when available) for legend labels.
+    """
+    for family_label, (on_key, off_key) in SUBSTITUTIONS_PAIRS.items():
+        if on_key not in results or off_key not in results:
+            continue
+
+        series_key = "avg_per_idx_changes_focus" if focus else "avg_per_idx_changes"
+        on_idx_changes  = results[on_key].get(series_key, {})
+        off_idx_changes = results[off_key].get(series_key, {})
+        if not on_idx_changes or not off_idx_changes:
+            continue
+
+        xs = sorted(set(on_idx_changes.keys()) & set(off_idx_changes.keys()))
+        if not xs:
+            continue
+        xs = xs[:max_points]
+        ys_on  = [on_idx_changes[x]  for x in xs]
+        ys_off = [off_idx_changes[x] for x in xs]
+
+        # Legend labels: prefer pretty names if present
+        label_on  = MODEL_NAME_MAP.get(on_key,  f"{family_label} (on)")
+        label_off = MODEL_NAME_MAP.get(off_key, f"{family_label} (off)")
+
+        plt.figure(figsize=(7, 4.5))
+        plt.plot(xs, ys_on,  linewidth=1.8, marker="o", markersize=3, label=label_on,  color="blue")
+        plt.plot(xs, ys_off, linewidth=1.8, marker="o", markersize=3, label=label_off, color="red")
+
+        sublabel = "opposing goals experiments" if focus else "all experiments"
+        plt.xlabel("Proposal index")
+        plt.ylabel("Avg. normalized substitutions")
+        plt.grid(True, linestyle=":", alpha=0.6)
+        plt.legend()
+        plt.tight_layout()
+
+        safe_family = family_label.replace("/", "_").replace(" ", "_").replace("(", "").replace(")", "")
+        outfile = (f"air_balloon_survival/substitutions_dual_focus_{safe_family}.pdf"
+                   if focus else
+                   f"air_balloon_survival/substitutions_dual_all_{safe_family}.pdf")
+        plt.savefig(outfile)
+        plt.close()
+
 
 if __name__ == "__main__":
     base_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -888,6 +1008,8 @@ if __name__ == "__main__":
 
         # plots for averaged results
         plot_changes(results)
+        plot_changes_dual(results, focus=False)
+        plot_changes_dual(results, focus=True)
         plot_focus_stubbornness_gpt(results)
         plot_focus_scores_gpt(results)
         plot_changes_per_model(results, focus=False)
