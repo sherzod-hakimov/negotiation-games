@@ -1,11 +1,13 @@
-# import logging
+import logging
 import os 
 import csv
 import gc
 import json
 
+import numpy as np
 import pandas as pd
 from pathlib import Path
+from typing import List
 
 
 from constant import MODEL_PROPERTIES, MODEL_W_REASONING_TRACE, TOKENIZER, KEYWORDS
@@ -15,7 +17,7 @@ from constant import ASSERT, PROPOSE, UNDERMINE, ALTERNATIVE, CONCLUDE
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='debug.log',
+    filename='labeling_log.log',
     filemode='a'  
 )
 
@@ -58,7 +60,7 @@ def transform(df, metrics_to_keep=None):
 # 💯: 100% percent sure
 # ✅: finished task but not 100% sure
 # ⚠️: can't finish task, skip
-def get_text_labels(text, lang='en', debug=True):
+def get_text_labels(text, lang='en', log=False):
     """
     Label sentences based on keyword presence with simple conflict resolution rules.
     
@@ -66,7 +68,8 @@ def get_text_labels(text, lang='en', debug=True):
         text: Input string to process, it's the content of a thinking event. 
     
     Returns:
-        List of labels for sentences containing keywords
+        A tuple, the first element is a list of reasoning labels extracted from given text based on keywords, 
+        the second element is the total number of sentences in the given text. 
     """
     text = text.lower()
     sentences = [s.strip() for s in text.split('.') if s.strip()]
@@ -105,7 +108,7 @@ def get_text_labels(text, lang='en', debug=True):
             # Warn about non-PROPOSE conflicts
             logging.debug(f"⚠️  Warning: conflicting labels: {matching_labels}; skip")
     
-    return labels    
+    return labels, len(sentences)     
 
 def extract_reasoning(data): 
     # extract the 1st turn only
@@ -116,7 +119,7 @@ def extract_reasoning(data):
 
     return extracted
 
-def write_reasoning_csv(output_csv="reasoning_labels_per_episode.csv"):
+def write_reasoning_csv(log=False, output_csv="reasoning_labels_per_episode.csv"):
     """
     Extract reasoning traces from the 1st turn of interactions, 
     transfrom them into `reasoning_raw` (thinking events as it is) 
@@ -142,7 +145,10 @@ def write_reasoning_csv(output_csv="reasoning_labels_per_episode.csv"):
                 if not file_exists:
                     writer.writerow([
                         "lang", "model", "game", "experiment", "episode",
-                        "reasoning_raw", "reasoning_labels"
+                        "reasoning_raw", "reasoning_labels", 
+                        "reasoning_chain_len", 
+                        "reasoning_chain_avg_len", 
+                        "reasoning_chain_ratio"
                     ])
         
                 for i, json_file in enumerate(json_files):
@@ -160,34 +166,48 @@ def write_reasoning_csv(output_csv="reasoning_labels_per_episode.csv"):
                         reasoning_raw = json.dumps(reasoning_raw_r)
                         
                         logging.debug(f"====== Processing {lang}-{model}-{json_file} ======")
-                        reasoning_labels_r = [
-                            get_text_labels(e['action']['content'], lang=lang, debug=False) 
+                        reasoning_info = [
+                            get_text_labels(e['action']['content'], lang=lang, log=log) 
                             for e in reasoning_raw_r
                         ]
+                        reasoning_labels_r, sent_counts = zip(*reasoning_info)
+                        reasoning_labels_r: List[List[str]] = list(reasoning_labels_r)
+                        sent_counts = list(sent_counts)
+                        
+                        reasoning_chain_len_r: List[int] = [len(ele) for ele in reasoning_labels_r]
+                        reasoning_chain_avg_len: float = sum(reasoning_chain_len_r) / len(reasoning_chain_len_r) 
+                        
                         reasoning_labels = json.dumps(reasoning_labels_r)
+                        reasoning_chain_len = json.dumps(reasoning_chain_len_r)
+
+                        reasoning_chain_ratio = np.mean(np.array(reasoning_chain_len_r) / np.array(sent_counts))
                         
                         writer.writerow([lang, model, game, experiment, episode, 
-                                       reasoning_raw, reasoning_labels])
+                                       reasoning_raw, reasoning_labels, 
+                                       reasoning_chain_len, 
+                                       reasoning_chain_avg_len, 
+                                       reasoning_chain_ratio 
+                                        ])
                         
                         # Flush to disk periodically
                         if (i + 1) % 10 == 0:
                             csvfile.flush()
                         
-                        # Clean up
-                        del data, reasoning_raw_r, reasoning_raw, reasoning_labels_r, reasoning_labels
+                        # # Clean up
+                        # del data, reasoning_raw_r, reasoning_raw, reasoning_labels_r, reasoning_labels
                         
-                        # Garbage collect periodically
-                        if (i + 1) % 20 == 0:
-                            gc.collect()
+                        # # Garbage collect periodically
+                        # if (i + 1) % 20 == 0:
+                        #     gc.collect()
                             
                     except KeyboardInterrupt:
                         print(f"\n⚠️  Interrupted at {i}/{total}")
                         break
-                    except Exception as e:
-                        print(f"  ❌ Error: {e}")
-                        # Write error row with empty data
-                        writer.writerow([lang, model, game, experiment, episode, 
-                                       json.dumps({"error": str(e)}), "[]"])
+                    # except Exception as e:
+                    #     print(f"  ❌ Error: {e}")
+                    #     # Write error row with empty data
+                    #     writer.writerow([lang, model, game, experiment, episode, 
+                    #                    json.dumps({"error": str(e)}), "[]"])
                         continue
             
             print(f"\n✓ Completed: {output_csv}")
