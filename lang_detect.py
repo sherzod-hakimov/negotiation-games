@@ -3,7 +3,14 @@ import os
 import requests
 import re
 import json
-from add_thinking import find_experiment_dirs
+
+def find_experiment_dirs(base_dir: str, game_name: str = ""):
+    experiment_dirs = []
+    for root, dirs, files in os.walk(base_dir):
+        if "interactions.json" in files and "instance.json" in files and game_name in root:
+            experiment_dirs.append(root)
+    print(  f"found {len(experiment_dirs)} experiment dirs in {base_dir} with game_name '{game_name}'"  )
+    return experiment_dirs
 
 LANGUAGE_STATS_DIR = "./language_stats"
 
@@ -239,6 +246,7 @@ def detect_thinking_languages(experiment_dir: str):
             language_excerpts.append({
                 'type': type,
                 'language': main_language,
+                'length': len(text),
                 'text': text,
                 'timestamp': event.get('timestamp', '')
             })
@@ -259,6 +267,7 @@ def detect_thinking_languages(experiment_dir: str):
                     script_excerpts.append({
                         'type': type,
                         'script': script,
+                        'length': segment[1]-segment[0],
                         'text': text[segment[0]:segment[1]],
                         'context': segment_text,
                         'start': segment[0],
